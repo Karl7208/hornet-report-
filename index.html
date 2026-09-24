@@ -270,9 +270,10 @@ nav.tabs button[aria-selected="true"]{color:var(--ink);border-top-color:var(--am
    설정
    ===================================================================== */
 const DEFAULTS = {
-  mode: 'local',            // 'local' | 'supabase'
-  supabaseUrl: '',
-  supabaseAnonKey: '',
+const DEFAULTS = {
+  mode: 'supabase',            // 'local' | 'supabase'
+  supabaseUrl: 'https://wutwfnhtpvxvvgvuwker.supabase.co',
+  supabaseAnonKey: 'sb_publishable_OduH1zWwcADFq9H3IwQ2sw_9s9fR7Hv',
   retentionDays: 90,        // 원본 보존 기간
   trashDays: 30,            // 휴지통 보관 기간
   displayMaxPx: 2048,       // 표시용 사본 긴 변
