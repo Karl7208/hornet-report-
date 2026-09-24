@@ -4,9 +4,7 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <title>말벌 발생 신고 (시연판)</title>
-<link rel="preconnect" href="https://fonts.googleapis.com">
-<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans+KR:wght@400;500;700&display=swap">
-<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.css">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans+KR:wght@400;500;700&display=swap" media="print" onload="this.media='all'">
 <style>
 :root{
   --bg:#EDF0EB; --surface:#FFFFFF; --ink:#1B2420; --muted:#5C6962; --line:#D3DAD4;
@@ -40,7 +38,7 @@ section.view.on{display:block}
 .sos a{flex:none;background:#C62828;border-color:#C62828;color:#fff;text-decoration:none}
 .sub{margin-top:14px}
 .seg button[aria-pressed="true"]{background:var(--pine);border-color:var(--pine);color:var(--pine-ink)}
-.btn{display:inline-flex;align-items:center;justify-content:center;gap:6px;padding:11px 14px;border-radius:var(--r-sm);border:1px solid var(--line);background:transparent;color:var(--ink);font:inherit;font-size:.93rem;font-weight:500;cursor:pointer}
+.btn{white-space:nowrap;flex:none;display:inline-flex;align-items:center;justify-content:center;gap:6px;padding:11px 14px;border-radius:var(--r-sm);border:1px solid var(--line);background:transparent;color:var(--ink);font:inherit;font-size:.93rem;font-weight:500;cursor:pointer}
 .btn.primary{background:var(--pine);border-color:var(--pine);color:var(--pine-ink)}
 .btn:disabled{opacity:.45;cursor:not-allowed}
 .btn.full{width:100%;padding:15px;font-size:1rem}
@@ -263,8 +261,6 @@ nav.tabs button[aria-selected="true"]{color:var(--ink);border-top-color:var(--am
 <dialog id="sheet"><div class="sheet" id="sheetBody"></div></dialog>
 <div class="toast" id="toast" role="status"></div>
 
-<script src="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.js"></script>
-<script src="https://cdn.jsdelivr.net/npm/exifr@7.1.3/dist/full.umd.js"></script>
 <script>
 /* =====================================================================
    설정
@@ -277,7 +273,7 @@ const DEFAULTS = {
   trashDays: 30,            // 휴지통 보관 기간
   displayMaxPx: 2048,       // 표시용 사본 긴 변
   displayQuality: 0.85,
-  appVersion: 'demo-0.3'
+  appVersion: 'demo-0.4'
 };
 const LS = k => { try { return localStorage.getItem('hr.' + k); } catch { return null; } };
 const LSset = (k, v) => { try { localStorage.setItem('hr.' + k, v); } catch {} };
@@ -302,6 +298,27 @@ const km = (a, b) => { const R=6371, t=x=>x*Math.PI/180; const dLa=t(b.lat-a.lat
   const h=Math.sin(dLa/2)**2+Math.cos(t(a.lat))*Math.cos(t(b.lat))*Math.sin(dLo/2)**2; return 2*R*Math.asin(Math.sqrt(h)); };
 const fmtC = (lat, lon) => `${lat.toFixed(5)}, ${lon.toFixed(5)}`;
 function toast(msg){ const t=$('#toast'); t.textContent=msg; t.classList.add('on'); clearTimeout(t._h); t._h=setTimeout(()=>t.classList.remove('on'), 2600); }
+const LIBS = {
+  leaflet: { test: () => window.L, js: ['https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.js','https://cdn.jsdelivr.net/npm/leaflet@1.9.4/dist/leaflet.js'],
+             css: ['https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.css','https://cdn.jsdelivr.net/npm/leaflet@1.9.4/dist/leaflet.css'] },
+  exifr:   { test: () => window.exifr, js: ['https://cdn.jsdelivr.net/npm/exifr@7.1.3/dist/full.umd.js','https://cdnjs.cloudflare.com/ajax/libs/exifr/7.1.3/full.umd.js'] }
+};
+const _libP = {};
+function withTimeout(p, ms){ return Promise.race([p, new Promise((_, rej) => setTimeout(() => rej(new Error('시간 초과')), ms))]); }
+function need(name){
+  const lib = LIBS[name];
+  if (lib.test()) return Promise.resolve();
+  if (_libP[name]) return _libP[name];
+  _libP[name] = (async () => {
+    (lib.css || []).slice(0, 1).forEach(h => { const l = document.createElement('link'); l.rel = 'stylesheet'; l.href = h;
+      l.onerror = () => { if (lib.css[1]) { const l2 = document.createElement('link'); l2.rel = 'stylesheet'; l2.href = lib.css[1]; document.head.appendChild(l2); } };
+      document.head.appendChild(l); });
+    for (const src of lib.js) { try { await withTimeout(loadScript(src), 8000); if (lib.test()) return; } catch {} }
+    delete _libP[name];
+    throw new Error(name === 'leaflet' ? '지도 기능을 불러오지 못했습니다. 네트워크(기관망 차단 등)를 확인하세요.' : '사진 정보 읽기 기능을 불러오지 못했습니다.');
+  })();
+  return _libP[name];
+}
 function loadScript(src){ return new Promise((res, rej) => { const s=document.createElement('script'); s.src=src; s.onload=res; s.onerror=()=>rej(new Error('스크립트를 불러오지 못했습니다: '+src)); document.head.appendChild(s); }); }
 function download(name, text, type){ const b=new Blob([text],{type}); const a=document.createElement('a'); a.href=URL.createObjectURL(b); a.download=name; a.click(); setTimeout(()=>URL.revokeObjectURL(a.href), 2000); }
 let UID = LS('uid'); if (!UID) { UID = 'U-' + rand(10); LSset('uid', UID); }
@@ -335,6 +352,7 @@ function cleanRaw(obj){
 async function readExif(file){
   let raw = null;
   try {
+    await need('exifr');
     raw = await exifr.parse(file, { tiff:true, exif:true, gps:true, ifd1:false, interop:false,
       xmp:false, icc:false, iptc:false, jfif:false, ihdr:false, makerNote:false, userComment:false,
       mergeOutput:true, translateValues:true, reviveValues:true });
@@ -555,7 +573,8 @@ function renderPhotos(){
 
 /* ---------- 위치 ---------- */
 let mini, miniMk;
-function ensureMini(){
+async function ensureMini(){
+  await need('leaflet');
   const el = $('#miniMap'); el.classList.add('on');
   if (!mini) {
     mini = L.map(el, { zoomControl:true }).setView([36.3, 127.8], 7);
@@ -573,7 +592,9 @@ async function reverse(lat, lon){
 }
 async function setLoc(lat, lon, method, acc = null, note = ''){
   draft.loc = { lat, lon, method, acc, address:null, note };
-  ensureMini();
+  renderLoc();
+  try { await ensureMini(); } catch (err) { toast(err.message); }
+  if (!window.L || !mini) { const my = draft.loc; const addr = await reverse(lat, lon); if (draft.loc === my) { my.address = addr; renderLoc(); } return; }
   if (!miniMk) { miniMk = L.marker([lat, lon], { draggable:true }).addTo(mini);
     miniMk.on('dragend', () => { const p = miniMk.getLatLng(); setLoc(p.lat, p.lng, '지도선택'); }); }
   else miniMk.setLatLng([lat, lon]);
@@ -595,7 +616,7 @@ function gapHTML(){
 function checkGap(){ renderLoc(); }
 
 $('#useExifLoc').onclick = () => { const e = firstExifLoc(); if (e) setLoc(e.lat, e.lon, '사진위치'); };
-$('#pickMap').onclick = () => { ensureMini(); toast('지도를 눌러 위치를 정하세요.'); };
+$('#pickMap').onclick = async () => { try { await ensureMini(); toast('지도를 눌러 위치를 정하세요.'); } catch (err) { toast(err.message); } };
 $('#useHere').onclick = () => {
   if (!navigator.geolocation) { toast('이 브라우저는 위치를 제공하지 않습니다.'); return; }
   toast('현재 위치를 찾는 중…');
@@ -672,7 +693,7 @@ $('#submitBtn').onclick = async () => {
     Object.assign(draft, { type:null, nest:null, sev:null, act:null, photos:[], loc:null, seenSrc:'직접입력', seenManual:false });
     ['typeSeg','sevSeg','actSeg','nestSeg'].forEach(clearSeg); $('#stingN').value = 1; applyType();
     renderPhotos(); refreshExifBtn(); renderLoc(); $('#memo').value = ''; $('#seenDate').value = localDate(new Date()); $('#seenNote').textContent = '';
-    if (miniMk) { mini.removeLayer(miniMk); miniMk = null; }
+    if (miniMk && mini) { mini.removeLayer(miniMk); miniMk = null; }
     toast(`신고했습니다 (${report_id})`);
   } catch (err) { toast('저장하지 못했습니다: ' + err.message); }
   btn.disabled = false; btn.textContent = '신고하기';
@@ -766,6 +787,7 @@ $('#jsonAll').onclick = async () => download(`hornet_reports_${stamp()}.json`, J
    ===================================================================== */
 let big, bigLayer;
 async function renderBig(){
+  try { await need('leaflet'); } catch (err) { $('#bigMap').innerHTML = `<div class="empty">${esc(err.message)}</div>`; return; }
   if (!big) { big = L.map('bigMap').setView([36.3, 127.8], 7);
     L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', { maxZoom:19, attribution:'© OpenStreetMap' }).addTo(big);
     bigLayer = L.layerGroup().addTo(big); }
@@ -844,8 +866,9 @@ document.querySelectorAll('nav.tabs button').forEach(b => b.onclick = () => {
   if (b.dataset.v === 'v-report' && mini) setTimeout(() => mini.invalidateSize(), 50);
 });
 
+$('#modeLine').textContent = '저장소 연결 중…';
 (async () => {
-  try { await STORE.init(); $('#modeLine').innerHTML = `저장소: <b>${esc(STORE.name)}</b>${CFG.mode === 'local' ? ' — 이 기기 안에만 저장됩니다.' : ''}`; }
+  try { await withTimeout(STORE.init(), 15000); $('#modeLine').innerHTML = `저장소: <b>${esc(STORE.name)}</b>${CFG.mode === 'local' ? ' — 이 기기 안에만 저장됩니다.' : ''}`; }
   catch (err) {
     $('#modeLine').innerHTML = `<span style="color:var(--rust)">저장소 연결 실패: ${esc(err.message)}</span> 이 기기 저장으로 전환합니다.`;
     STORE = LocalStore; await STORE.init();
