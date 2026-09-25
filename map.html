@@ -1,0 +1,245 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>말벌 발생 현황</title>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans+KR:wght@400;500;700&display=swap" media="print" onload="this.media='all'">
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.css">
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/leaflet.markercluster/1.5.3/MarkerCluster.min.css">
+<style>
+:root{--bg:#F1F3F0;--surface:#fff;--ink:#1B2420;--muted:#5C6962;--line:#D3DAD4;--pine:#22463A;--amber:#E3A21A;--red:#C62828;--nest:#8E2A12;--done:#2E7BCF;
+  font-family:"IBM Plex Sans KR",system-ui,-apple-system,"Apple SD Gothic Neo","Malgun Gothic",sans-serif}
+@media (prefers-color-scheme:dark){:root{--bg:#111613;--surface:#19201C;--ink:#E4EAE6;--muted:#98A69E;--line:#2B3630;--pine:#7FC2A5}}
+*{box-sizing:border-box} html,body{margin:0;height:100%}
+body{background:var(--bg);color:var(--ink);display:grid;grid-template-rows:auto 1fr;padding-top:env(safe-area-inset-top,0px)}
+header{display:flex;flex-wrap:wrap;gap:8px 12px;align-items:center;padding:10px 14px;background:var(--surface);border-bottom:1px solid var(--line)}
+header h1{margin:0;font-size:1.1rem;display:flex;gap:10px;align-items:center}
+.stripe{width:26px;height:13px;border-radius:3px;background:repeating-linear-gradient(135deg,var(--amber) 0 5px,#1B2420 5px 10px)}
+header .sub{font-size:.8rem;color:var(--muted);flex:1;min-width:180px}
+.btn{display:inline-flex;align-items:center;gap:6px;padding:8px 12px;border-radius:8px;border:1px solid var(--line);background:var(--surface);color:var(--ink);font:inherit;font-size:.9rem;font-weight:500;text-decoration:none;white-space:nowrap;cursor:pointer}
+.btn.red{background:var(--red);border-color:var(--red);color:#fff}
+.wrap{display:grid;grid-template-columns:1fr 330px;min-height:0}
+#map{height:100%;min-height:380px;background:#dfe7dc}
+aside{overflow:auto;padding:12px 14px;background:var(--surface);border-left:1px solid var(--line)}
+@media (max-width:820px){.wrap{grid-template-columns:1fr;grid-template-rows:58vh auto}aside{border-left:0;border-top:1px solid var(--line)}}
+h2{font-size:.95rem;margin:14px 0 8px}
+h2:first-child{margin-top:2px}
+.seg{display:flex;gap:4px}
+.seg button{flex:1;padding:7px 4px;border:1px solid var(--line);background:transparent;color:var(--ink);border-radius:7px;font:inherit;font-size:.85rem;cursor:pointer}
+.seg button[aria-pressed=true]{background:var(--ink);color:var(--bg);border-color:var(--ink)}
+.chk{display:flex;align-items:center;gap:8px;font-size:.88rem;padding:3px 0;cursor:pointer}
+.dot{width:12px;height:12px;border-radius:50%;display:inline-block;border:2px solid #fff;box-shadow:0 0 0 1px rgba(0,0,0,.3);flex:none}
+.kpis{display:grid;grid-template-columns:1fr 1fr;gap:8px}
+.kpi{border:1px solid var(--line);border-radius:10px;padding:8px 10px}
+.kpi b{display:block;font-size:1.35rem;font-variant-numeric:tabular-nums;line-height:1.2}
+.kpi span{font-size:.78rem;color:var(--muted)}
+.kpi.hot b{color:var(--nest)} .kpi.ok b{color:var(--done)}
+.line{font-size:.86rem;margin:4px 0}
+.bars .r{display:grid;grid-template-columns:92px 1fr 34px;gap:6px;align-items:center;font-size:.82rem;margin:3px 0}
+.bars .b{height:9px;border-radius:5px;background:var(--amber)}
+table{width:100%;border-collapse:collapse;font-size:.82rem;font-variant-numeric:tabular-nums}
+th,td{padding:4px 3px;border-bottom:1px solid var(--line);text-align:right} th:first-child,td:first-child{text-align:left}
+.note{font-size:.78rem;color:var(--muted);line-height:1.5;margin-top:12px}
+.safety{border-left:4px solid var(--red);padding:8px 10px;font-size:.84rem;margin-top:12px;background:color-mix(in srgb,var(--red) 7%,transparent)}
+/* 배경 지도: 흑백으로 지수 위에 곱하기 (말벌 활동 지수 앱과 같은 방식) */
+.basetop{mix-blend-mode:multiply} .gray-tiles{filter:grayscale(1) contrast(1.05) brightness(1.08)}
+.pin{width:14px;height:14px;border-radius:50%;border:2px solid #fff;box-shadow:0 0 0 1px rgba(0,0,0,.35)}
+.pin.nest{background:var(--nest);width:16px;height:16px}
+.pin.done{background:var(--done);width:16px;height:16px;display:flex;align-items:center;justify-content:center;color:#fff;font-size:10px;font-weight:700;line-height:1}
+.pin.wasp{background:var(--amber);width:11px;height:11px}
+.pin.sting{background:var(--red);border-radius:3px;transform:rotate(45deg)}
+.cl{display:flex;align-items:center;justify-content:center;border-radius:50%;color:#fff;font-weight:700;font-size:.8rem;border:2px solid #fff;box-shadow:0 0 0 1px rgba(0,0,0,.3)}
+.leaflet-popup-content{font-size:.86rem;line-height:1.5}
+</style>
+</head>
+<body>
+<header>
+  <h1><span class="stripe"></span>말벌 발생 현황</h1>
+  <span class="sub" id="sub">불러오는 중…</span>
+  <a class="btn red" href="index.html">신고하기</a>
+  <a class="btn" id="indexLink" target="_blank" rel="noopener">우리 지역 말벌 활동</a>
+</header>
+<div class="wrap">
+  <div id="map"></div>
+  <aside>
+    <div id="idxStage" hidden style="border:1px solid var(--line);border-radius:10px;padding:10px 12px;margin-bottom:6px;font-size:.9rem"></div>
+    <h2>기간</h2>
+    <div class="seg" id="period">
+      <button type="button" data-v="7" aria-pressed="false">최근 7일</button>
+      <button type="button" data-v="30" aria-pressed="true">최근 30일</button>
+      <button type="button" data-v="year" aria-pressed="false">올해</button>
+    </div>
+    <h2>보기</h2>
+    <label class="chk"><input type="checkbox" data-k="nest" checked><span class="dot" style="background:var(--nest)"></span>활동 중인 벌집 (기간과 관계없이 모두)</label>
+    <label class="chk"><input type="checkbox" data-k="done" checked><span class="dot" style="background:var(--done)"></span>처리된 벌집 (제거·소멸)</label>
+    <label class="chk"><input type="checkbox" data-k="wasp" checked><span class="dot" style="background:var(--amber)"></span>말벌 목격</label>
+    <label class="chk"><input type="checkbox" data-k="sting" checked><span class="dot" style="background:var(--red);border-radius:3px"></span>쏘임</label>
+
+    <h2>현황</h2>
+    <div class="kpis" id="kpis"></div>
+    <h2>처리 결과</h2>
+    <div id="proc"></div>
+    <h2>확인된 종</h2>
+    <div class="bars" id="species"></div>
+    <h2>지역별 (활동 벌집·쏘임 많은 순)</h2>
+    <div class="seg" id="rlev" style="margin-bottom:6px">
+      <button type="button" data-v="sigungu" aria-pressed="true">시군구</button>
+      <button type="button" data-v="sido" aria-pressed="false">시도</button>
+    </div>
+    <div id="regions"></div>
+
+    <h2>말벌 활동 지수 (기상 기반)</h2>
+    <div class="line" style="color:var(--muted)">날씨로 계산한 말벌 활동 위험과 앞으로 2주 흐름입니다.</div>
+    <div style="display:flex;gap:6px;flex-wrap:wrap;margin-top:6px">
+      <a class="btn" id="idxLocal" target="_blank" rel="noopener">우리 지역 (시민용)</a>
+      <a class="btn" id="idxAll" target="_blank" rel="noopener">전국 (담당자용)</a>
+    </div>
+    <div class="safety">벌집을 발견하면 직접 없애지 말고 멀리 떨어진 뒤 119에 제거를 요청하세요. 쏘인 뒤 어지럽거나 숨이 차면 바로 119.</div>
+    <p class="note">담당자가 사진과 내용을 확인한 신고만 표시합니다 (2일 단위 갱신). 개인 정보 보호를 위해 위치는 약 1km 단위로 표시하며, 정확한 주소는 공개하지 않습니다.</p>
+  </aside>
+</div>
+<div class="toast" id="toast" role="status" style="display:none"></div>
+<script src="common.js"></script>
+<script>
+$('#indexLink').href = INDEX_APP_URL + 'local.html';
+$('#idxLocal').href = INDEX_APP_URL + 'local.html'; $('#idxAll').href = INDEX_APP_URL;
+/* 말벌 활동 지수 앱의 이번 주 전국 단계 (같은 github.io 주소라 바로 읽힘, 실패해도 조용히 숨김) */
+const STAGE_COLOR = { '관심': '#5C6962', '주의': '#B7800F', '경계': '#D2691E', '심각': '#B0001E' };
+async function showIndexStage(el){
+  try {
+    const m = await (await withTimeout(fetch(INDEX_APP_URL + 'data/latest/meta.json?v=' + Date.now()), 6000)).json();
+    if (!m.national_stage) return;
+    const d = new Date(m.date); const md = `${d.getMonth() + 1}/${d.getDate()}`;
+    const tip = { '관심': '말벌 활동이 적은 시기입니다.', '주의': '말벌 활동이 시작됐습니다. 벌초·산행 때 주의하세요.',
+                  '경계': '말벌 활동이 활발합니다. 벌초·산행 전 주변을 살피세요.', '심각': '말벌 활동이 매우 활발합니다. 산·들 작업을 조심하세요.' }[m.national_stage] || '';
+    el.innerHTML = `<a href="${INDEX_APP_URL}" target="_blank" rel="noopener" style="display:flex;gap:10px;align-items:center;text-decoration:none;color:inherit">
+      <span style="flex:none;background:${STAGE_COLOR[m.national_stage] || '#5C6962'};color:#fff;font-weight:700;border-radius:6px;padding:4px 10px">${esc(m.national_stage)}</span>
+      <span style="flex:1"><b>이번 주 말벌 활동</b> (${md} 기상 기준)<br><span style="font-size:.88em;opacity:.85">${esc(tip)}</span></span>
+      <span style="flex:none;font-size:.85em;text-decoration:underline">지수 지도</span></a>`;
+    el.hidden = false;
+  } catch {}
+}
+showIndexStage($('#idxStage'));
+
+let DATA = [], period = '30', map, cluster, rlev = 'sigungu';
+const regionName = d => rlev === 'sido' ? (d.sido || (d.region || '').split(' ')[0] || '지역 미상')
+                                          : ([d.sido, d.sigungu].filter(Boolean).join(' ') || d.region || '지역 미상');
+const on = { nest: true, done: true, wasp: true, sting: true };
+const dayDiff = (a, b) => Math.round((new Date(b) - new Date(a)) / 864e5);
+const since = () => period === 'year' ? `${new Date().getFullYear()}-01-01` : localDate(new Date(Date.now() - (+period) * 864e5));
+
+function kind(d){
+  if (d.report_type === '벌집') return d.nest_status === '활동중' ? 'nest' : 'done';
+  return d.report_type === '쏘임' ? 'sting' : 'wasp';
+}
+function inView(d){
+  const k = kind(d); if (!on[k]) return false;
+  if (k === 'nest') return true;                                   // 활동 중인 둥지는 늘 표시 (지금도 위험)
+  const dt = k === 'done' ? (d.nest_status_at || d.seen_date) : d.seen_date;
+  return dt >= since();
+}
+function popup(d){
+  const k = kind(d);
+  const head = { nest: '활동 중인 벌집', done: `<span style="color:var(--done)">✓ 처리된 벌집 (${esc(d.nest_status)})</span>`, wasp: '말벌 목격', sting: '쏘임' }[k];
+  const lines = [`<b>${head}</b>`];
+  if (d.species && d.species !== '판별불가') lines.push(`종: ${esc(d.species)}`);
+  const rn = [d.sido, d.sigungu].filter(Boolean).join(' ') || d.region;
+  lines.push(`${k === 'sting' ? '발생' : '발견'}: ${esc(d.seen_date)}${rn ? ' · ' + esc(rn) : ''}`);
+  if (d.place_type) lines.push(`장소: ${esc(d.place_type)}`);
+  if (k === 'sting' && d.sting_count) lines.push(`쏘인 사람: ${d.sting_count}명`);
+  if (k === 'done' && d.nest_status_at) lines.push(`처리: ${esc(d.nest_status_at)}${d.nest_handler ? ' · ' + esc(d.nest_handler) : ''} (발견 후 ${Math.max(0, dayDiff(d.seen_date, d.nest_status_at))}일)`);
+  if (k === 'nest') lines.push(`<span style="color:var(--nest)">가까이 가지 마세요. 확인 ${esc(d.confirmed_on || '')}</span>`);
+  return lines.join('<br>');
+}
+function icon(k){
+  const cls = { nest: 'pin nest', done: 'pin done', wasp: 'pin wasp', sting: 'pin sting' }[k];
+  const size = k === 'nest' || k === 'done' ? 20 : k === 'wasp' ? 15 : 18;
+  return L.divIcon({ className: '', html: `<div class="${cls}">${k === 'done' ? '✓' : ''}</div>`, iconSize: [size, size], iconAnchor: [size / 2, size / 2] });
+}
+
+function draw(){
+  if (!map) return;
+  cluster.clearLayers();
+  const vis = DATA.filter(inView);
+  vis.forEach(d => {
+    const k = kind(d);
+    const m = L.marker([d.lat_g, d.lon_g], { icon: icon(k), kind: k });
+    m.bindPopup(popup(d)); cluster.addLayer(m);
+  });
+  summarize();
+}
+
+function summarize(){
+  const s = since(), y0 = `${new Date().getFullYear()}-01-01`;
+  const active = DATA.filter(d => kind(d) === 'nest');
+  const doneP = DATA.filter(d => kind(d) === 'done' && (d.nest_status_at || d.seen_date) >= s);
+  const wasp = DATA.filter(d => kind(d) === 'wasp' && d.seen_date >= s);
+  const sting = DATA.filter(d => kind(d) === 'sting' && d.seen_date >= s);
+  const people = sting.reduce((a, d) => a + (d.sting_count || 1), 0);
+  $('#kpis').innerHTML = [
+    ['hot', active.length, '활동 중인 벌집 (지금)'], ['ok', doneP.length, '처리된 벌집 (기간)'],
+    ['', wasp.length, '말벌 목격 (기간)'], ['', `${sting.length}건 · ${people}명`, '쏘임 (기간)']
+  ].map(([c, b, t]) => `<div class="kpi ${c}"><b>${b}</b><span>${t}</span></div>`).join('');
+
+  // 처리 결과: 올해 확인된 벌집 기준 처리율, 평균 처리 기간, 처리 주체
+  const yearNests = DATA.filter(d => d.report_type === '벌집' && d.seen_date >= y0);
+  const closed = yearNests.filter(d => kind(d) === 'done');
+  const removed = closed.filter(d => d.nest_status === '제거됨' && d.nest_status_at);
+  const avg = removed.length ? (removed.reduce((a, d) => a + Math.max(0, dayDiff(d.seen_date, d.nest_status_at)), 0) / removed.length) : null;
+  const byH = {}; closed.forEach(d => { const h = d.nest_handler || (d.nest_status === '사라짐' ? '자진 소멸' : '미기재'); byH[h] = (byH[h] || 0) + 1; });
+  $('#proc').innerHTML = yearNests.length
+    ? `<div class="line">올해 확인된 벌집 <b>${yearNests.length}</b>곳 중 <b>${closed.length}</b>곳 처리 (${Math.round(100 * closed.length / yearNests.length)}%)</div>`
+      + (avg != null ? `<div class="line">발견부터 제거까지 평균 <b>${avg.toFixed(1)}</b>일</div>` : '')
+      + (Object.keys(byH).length ? `<div class="line">처리 주체: ${Object.entries(byH).sort((a, b) => b[1] - a[1]).map(([h, n]) => `${esc(h)} ${n}`).join(' · ')}</div>` : '')
+    : '<div class="line" style="color:var(--muted)">올해 확인된 벌집이 아직 없습니다.</div>';
+
+  // 확인된 종 (기간 안, 판별된 것만)
+  const sp = {}; DATA.filter(d => d.seen_date >= s && d.species && d.species !== '판별불가').forEach(d => sp[d.species] = (sp[d.species] || 0) + 1);
+  const spE = Object.entries(sp).sort((a, b) => b[1] - a[1]); const mx = Math.max(1, ...spE.map(x => x[1]));
+  $('#species').innerHTML = spE.length ? spE.map(([k, n]) => `<div class="r"><span>${esc(k)}</span><div class="b" style="width:${100 * n / mx}%"></div><span>${n}</span></div>`).join('')
+    : '<div class="line" style="color:var(--muted)">기간 안에 종까지 확인된 신고가 없습니다.</div>';
+
+  // 지역별
+  const rg = {};
+  DATA.forEach(d => { const r = regionName(d); rg[r] = rg[r] || { nest: 0, sting: 0, done: 0 };
+    const k = kind(d); if (k === 'nest') rg[r].nest++; if (k === 'sting' && d.seen_date >= s) rg[r].sting++; if (k === 'done' && (d.nest_status_at || d.seen_date) >= s) rg[r].done++; });
+  const rE = Object.entries(rg).filter(([, v]) => v.nest + v.sting + v.done).sort((a, b) => (b[1].nest + b[1].sting) - (a[1].nest + a[1].sting)).slice(0, rlev === 'sido' ? 17 : 15);
+  $('#regions').innerHTML = rE.length ? `<table><tr><th>지역</th><th>활동 벌집</th><th>쏘임</th><th>처리</th></tr>${rE.map(([r, v]) => `<tr><td>${esc(r)}</td><td>${v.nest}</td><td>${v.sting}</td><td>${v.done}</td></tr>`).join('')}</table>`
+    : '<div class="line" style="color:var(--muted)">표시할 자료가 없습니다.</div>';
+}
+
+document.querySelectorAll('#period button').forEach(b => b.onclick = () => {
+  period = b.dataset.v; document.querySelectorAll('#period button').forEach(x => x.setAttribute('aria-pressed', String(x === b))); draw();
+});
+document.querySelectorAll('input[data-k]').forEach(c => c.onchange = () => { on[c.dataset.k] = c.checked; draw(); });
+document.querySelectorAll('#rlev button').forEach(b => b.onclick = () => {
+  rlev = b.dataset.v; document.querySelectorAll('#rlev button').forEach(x => x.setAttribute('aria-pressed', String(x === b))); summarize();
+});
+
+(async () => {
+  await initStore(null);
+  try { await need('leaflet'); await loadScript('https://cdnjs.cloudflare.com/ajax/libs/leaflet.markercluster/1.5.3/leaflet.markercluster.js'); }
+  catch (err) { $('#sub').textContent = '지도를 불러오지 못했습니다: ' + err.message; return; }
+  map = L.map('map').setView([36.2, 127.8], 7);
+  // 배경: 컬러 일반 지도 (브이월드 Base, 키가 없으면 OpenStreetMap 기본)
+  (KEYS.vworld
+    ? L.tileLayer(`https://api.vworld.kr/req/wmts/1.0.0/${KEYS.vworld}/Base/{z}/{y}/{x}.png`, { maxZoom: 18, attribution: '© 국토교통부 브이월드' })
+    : L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', { maxZoom: 18, attribution: '© OpenStreetMap' })).addTo(map);
+  cluster = L.markerClusterGroup({ showCoverageOnHover: false, maxClusterRadius: 40, spiderfyOnMaxZoom: true,
+    iconCreateFunction: c => {
+      const ks = c.getAllChildMarkers().map(m => m.options.kind), n = ks.length;
+      const col = ks.includes('nest') ? 'var(--nest)' : ks.includes('sting') ? 'var(--red)' : ks.includes('wasp') ? '#B7800F' : 'var(--done)';
+      const sz = n < 10 ? 30 : n < 50 ? 38 : 46;
+      return L.divIcon({ className: '', html: `<div class="cl" style="width:${sz}px;height:${sz}px;background:${col}">${n}</div>`, iconSize: [sz, sz] });
+    } });
+  map.addLayer(cluster);
+  try {
+    DATA = await STORE.publicMap();
+    $('#sub').textContent = `담당자 확인 자료 ${DATA.length}건 · ${localStamp(new Date()).slice(0, 16)} 기준`;
+  } catch (err) { $('#sub').textContent = '자료를 불러오지 못했습니다: ' + err.message; }
+  draw();
+})();
+</script>
+</body>
+</html>
