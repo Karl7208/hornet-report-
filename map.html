@@ -100,10 +100,14 @@ th,td{padding:4px 3px;border-bottom:1px solid var(--line);text-align:right} th:f
   </aside>
 </div>
 <div class="toast" id="toast" role="status" style="display:none"></div>
+<script src="i18n.js"></script>
 <script src="common.js"></script>
 <script>
-$('#indexLink').href = INDEX_APP_URL + 'local.html';
-$('#idxLocal').href = INDEX_APP_URL + 'local.html'; $('#idxAll').href = INDEX_APP_URL;
+translateDom();
+document.querySelector('header').appendChild(langButton());
+$('#indexLink').href = INDEX_APP_URL + 'local.html?lang=' + LANG;
+$('#idxLocal').href = INDEX_APP_URL + 'local.html?lang=' + LANG; $('#idxAll').href = INDEX_APP_URL;
+document.querySelector('a[href="index.html"]').href = 'index.html?lang=' + LANG;
 /* 말벌 활동 지수 앱의 이번 주 전국 단계 (같은 github.io 주소라 바로 읽힘, 실패해도 조용히 숨김) */
 const STAGE_COLOR = { '관심': '#5C6962', '주의': '#B7800F', '경계': '#D2691E', '심각': '#B0001E' };
 async function showIndexStage(el){
@@ -111,20 +115,20 @@ async function showIndexStage(el){
     const m = await (await withTimeout(fetch(INDEX_APP_URL + 'data/latest/meta.json?v=' + Date.now()), 6000)).json();
     if (!m.national_stage) return;
     const d = new Date(m.date); const md = `${d.getMonth() + 1}/${d.getDate()}`;
-    const tip = { '관심': '말벌 활동이 적은 시기입니다.', '주의': '말벌 활동이 시작됐습니다. 벌초·산행 때 주의하세요.',
-                  '경계': '말벌 활동이 활발합니다. 벌초·산행 전 주변을 살피세요.', '심각': '말벌 활동이 매우 활발합니다. 산·들 작업을 조심하세요.' }[m.national_stage] || '';
-    el.innerHTML = `<a href="${INDEX_APP_URL}" target="_blank" rel="noopener" style="display:flex;gap:10px;align-items:center;text-decoration:none;color:inherit">
-      <span style="flex:none;background:${STAGE_COLOR[m.national_stage] || '#5C6962'};color:#fff;font-weight:700;border-radius:6px;padding:4px 10px">${esc(m.national_stage)}</span>
-      <span style="flex:1"><b>이번 주 말벌 활동</b> (${md} 기상 기준)<br><span style="font-size:.88em;opacity:.85">${esc(tip)}</span></span>
-      <span style="flex:none;font-size:.85em;text-decoration:underline">지수 지도</span></a>`;
+    const tip = T({ '관심': '말벌 활동이 적은 시기입니다.', '주의': '말벌 활동이 시작됐습니다. 벌초·산행 때 주의하세요.',
+                  '경계': '말벌 활동이 활발합니다. 벌초·산행 전 주변을 살피세요.', '심각': '말벌 활동이 매우 활발합니다. 산·들 작업을 조심하세요.' }[m.national_stage] || '');
+    el.innerHTML = `<a href="${INDEX_APP_URL}local.html?lang=${LANG}" target="_blank" rel="noopener" style="display:flex;gap:10px;align-items:center;text-decoration:none;color:inherit">
+      <span style="flex:none;background:${STAGE_COLOR[m.national_stage] || '#5C6962'};color:#fff;font-weight:700;border-radius:6px;padding:4px 10px">${esc(T(m.national_stage))}</span>
+      <span style="flex:1"><b>${T('이번 주 말벌 활동')}</b> (${md} ${T('기상 기준')})<br><span style="font-size:.88em;opacity:.85">${esc(tip)}</span></span>
+      <span style="flex:none;font-size:.85em;text-decoration:underline">${T('지수 지도')}</span></a>`;
     el.hidden = false;
   } catch {}
 }
 showIndexStage($('#idxStage'));
 
 let DATA = [], period = '30', map, cluster, rlev = 'sigungu';
-const regionName = d => rlev === 'sido' ? (d.sido || (d.region || '').split(' ')[0] || '지역 미상')
-                                          : ([d.sido, d.sigungu].filter(Boolean).join(' ') || d.region || '지역 미상');
+const regionName = d => rlev === 'sido' ? (d.sido || (d.region || '').split(' ')[0] || T('지역 미상'))
+                                          : ([d.sido, d.sigungu].filter(Boolean).join(' ') || d.region || T('지역 미상'));
 const on = { nest: true, done: true, wasp: true, sting: true };
 const dayDiff = (a, b) => Math.round((new Date(b) - new Date(a)) / 864e5);
 const since = () => period === 'year' ? `${new Date().getFullYear()}-01-01` : localDate(new Date(Date.now() - (+period) * 864e5));
@@ -141,15 +145,15 @@ function inView(d){
 }
 function popup(d){
   const k = kind(d);
-  const head = { nest: '활동 중인 벌집', done: `<span style="color:var(--done)">✓ 처리된 벌집 (${esc(d.nest_status)})</span>`, wasp: '말벌 목격', sting: '쏘임' }[k];
+  const head = { nest: T('활동 중인 벌집'), done: `<span style="color:var(--done)">${esc(T('✓ 처리된 벌집 ({s})', { s: TV(d.nest_status) }))}</span>`, wasp: T('말벌 목격'), sting: T('쏘임') }[k];
   const lines = [`<b>${head}</b>`];
-  if (d.species && d.species !== '판별불가') lines.push(`종: ${esc(d.species)}`);
+  if (d.species && d.species !== '판별불가') lines.push(esc(T('종: {s}', { s: TS(d.species) })));
   const rn = [d.sido, d.sigungu].filter(Boolean).join(' ') || d.region;
-  lines.push(`${k === 'sting' ? '발생' : '발견'}: ${esc(d.seen_date)}${rn ? ' · ' + esc(rn) : ''}`);
-  if (d.place_type) lines.push(`장소: ${esc(d.place_type)}`);
-  if (k === 'sting' && d.sting_count) lines.push(`쏘인 사람: ${d.sting_count}명`);
-  if (k === 'done' && d.nest_status_at) lines.push(`처리: ${esc(d.nest_status_at)}${d.nest_handler ? ' · ' + esc(d.nest_handler) : ''} (발견 후 ${Math.max(0, dayDiff(d.seen_date, d.nest_status_at))}일)`);
-  if (k === 'nest') lines.push(`<span style="color:var(--nest)">가까이 가지 마세요. 확인 ${esc(d.confirmed_on || '')}</span>`);
+  lines.push(esc(T(k === 'sting' ? '발생: {d}' : '발견: {d}', { d: d.seen_date })) + (rn ? ' · ' + esc(rn) : ''));
+  if (d.place_type) lines.push(esc(T('장소: {s}', { s: TV(d.place_type) })));
+  if (k === 'sting' && d.sting_count) lines.push(esc(T('쏘인 사람: {n}명', { n: d.sting_count })));
+  if (k === 'done' && d.nest_status_at) lines.push(esc(T('처리: {d}{h} (발견 후 {n}일)', { d: d.nest_status_at, h: d.nest_handler ? ' · ' + TV(d.nest_handler) : '', n: Math.max(0, dayDiff(d.seen_date, d.nest_status_at)) })));
+  if (k === 'nest') lines.push(`<span style="color:var(--nest)">${esc(T('가까이 가지 마세요. 확인 {d}', { d: d.confirmed_on || '' }))}</span>`);
   return lines.join('<br>');
 }
 function icon(k){
@@ -179,8 +183,8 @@ function summarize(){
   const people = sting.reduce((a, d) => a + (d.sting_count || 1), 0);
   $('#kpis').innerHTML = [
     ['hot', active.length, '활동 중인 벌집 (지금)'], ['ok', doneP.length, '처리된 벌집 (기간)'],
-    ['', wasp.length, '말벌 목격 (기간)'], ['', `${sting.length}건 · ${people}명`, '쏘임 (기간)']
-  ].map(([c, b, t]) => `<div class="kpi ${c}"><b>${b}</b><span>${t}</span></div>`).join('');
+    ['', wasp.length, '말벌 목격 (기간)'], ['', T('{a}건 · {b}명', { a: sting.length, b: people }), '쏘임 (기간)']
+  ].map(([c, b, t]) => `<div class="kpi ${c}"><b>${b}</b><span>${T(t)}</span></div>`).join('');
 
   // 처리 결과: 올해 확인된 벌집 기준 처리율, 평균 처리 기간, 처리 주체
   const yearNests = DATA.filter(d => d.report_type === '벌집' && d.seen_date >= y0);
@@ -189,24 +193,24 @@ function summarize(){
   const avg = removed.length ? (removed.reduce((a, d) => a + Math.max(0, dayDiff(d.seen_date, d.nest_status_at)), 0) / removed.length) : null;
   const byH = {}; closed.forEach(d => { const h = d.nest_handler || (d.nest_status === '사라짐' ? '자진 소멸' : '미기재'); byH[h] = (byH[h] || 0) + 1; });
   $('#proc').innerHTML = yearNests.length
-    ? `<div class="line">올해 확인된 벌집 <b>${yearNests.length}</b>곳 중 <b>${closed.length}</b>곳 처리 (${Math.round(100 * closed.length / yearNests.length)}%)</div>`
-      + (avg != null ? `<div class="line">발견부터 제거까지 평균 <b>${avg.toFixed(1)}</b>일</div>` : '')
-      + (Object.keys(byH).length ? `<div class="line">처리 주체: ${Object.entries(byH).sort((a, b) => b[1] - a[1]).map(([h, n]) => `${esc(h)} ${n}`).join(' · ')}</div>` : '')
-    : '<div class="line" style="color:var(--muted)">올해 확인된 벌집이 아직 없습니다.</div>';
+    ? `<div class="line">${T('올해 확인된 벌집 <b>{a}</b>곳 중 <b>{b}</b>곳 처리 ({p}%)', { a: yearNests.length, b: closed.length, p: Math.round(100 * closed.length / yearNests.length) })}</div>`
+      + (avg != null ? `<div class="line">${T('발견부터 제거까지 평균 <b>{n}</b>일', { n: avg.toFixed(1) })}</div>` : '')
+      + (Object.keys(byH).length ? `<div class="line">${esc(T('처리 주체: {s}', { s: Object.entries(byH).sort((a, b) => b[1] - a[1]).map(([h, n]) => `${TV(h)} ${n}`).join(' · ') }))}</div>` : '')
+    : `<div class="line" style="color:var(--muted)">${T('올해 확인된 벌집이 아직 없습니다.')}</div>`;
 
   // 확인된 종 (기간 안, 판별된 것만)
   const sp = {}; DATA.filter(d => d.seen_date >= s && d.species && d.species !== '판별불가').forEach(d => sp[d.species] = (sp[d.species] || 0) + 1);
   const spE = Object.entries(sp).sort((a, b) => b[1] - a[1]); const mx = Math.max(1, ...spE.map(x => x[1]));
-  $('#species').innerHTML = spE.length ? spE.map(([k, n]) => `<div class="r"><span>${esc(k)}</span><div class="b" style="width:${100 * n / mx}%"></div><span>${n}</span></div>`).join('')
-    : '<div class="line" style="color:var(--muted)">기간 안에 종까지 확인된 신고가 없습니다.</div>';
+  $('#species').innerHTML = spE.length ? spE.map(([k, n]) => `<div class="r"><span>${esc(TS(k))}</span><div class="b" style="width:${100 * n / mx}%"></div><span>${n}</span></div>`).join('')
+    : `<div class="line" style="color:var(--muted)">${T('기간 안에 종까지 확인된 신고가 없습니다.')}</div>`;
 
   // 지역별
   const rg = {};
   DATA.forEach(d => { const r = regionName(d); rg[r] = rg[r] || { nest: 0, sting: 0, done: 0 };
     const k = kind(d); if (k === 'nest') rg[r].nest++; if (k === 'sting' && d.seen_date >= s) rg[r].sting++; if (k === 'done' && (d.nest_status_at || d.seen_date) >= s) rg[r].done++; });
   const rE = Object.entries(rg).filter(([, v]) => v.nest + v.sting + v.done).sort((a, b) => (b[1].nest + b[1].sting) - (a[1].nest + a[1].sting)).slice(0, rlev === 'sido' ? 17 : 15);
-  $('#regions').innerHTML = rE.length ? `<table><tr><th>지역</th><th>활동 벌집</th><th>쏘임</th><th>처리</th></tr>${rE.map(([r, v]) => `<tr><td>${esc(r)}</td><td>${v.nest}</td><td>${v.sting}</td><td>${v.done}</td></tr>`).join('')}</table>`
-    : '<div class="line" style="color:var(--muted)">표시할 자료가 없습니다.</div>';
+  $('#regions').innerHTML = rE.length ? `<table><tr><th>${T('지역')}</th><th>${T('활동 벌집')}</th><th>${T('쏘임')}</th><th>${T('처리')}</th></tr>${rE.map(([r, v]) => `<tr><td>${esc(r)}</td><td>${v.nest}</td><td>${v.sting}</td><td>${v.done}</td></tr>`).join('')}</table>`
+    : `<div class="line" style="color:var(--muted)">${T('표시할 자료가 없습니다.')}</div>`;
 }
 
 document.querySelectorAll('#period button').forEach(b => b.onclick = () => {
@@ -220,7 +224,7 @@ document.querySelectorAll('#rlev button').forEach(b => b.onclick = () => {
 (async () => {
   await initStore(null);
   try { await need('leaflet'); await loadScript('https://cdnjs.cloudflare.com/ajax/libs/leaflet.markercluster/1.5.3/leaflet.markercluster.js'); }
-  catch (err) { $('#sub').textContent = '지도를 불러오지 못했습니다: ' + err.message; return; }
+  catch (err) { $('#sub').textContent = T('지도를 불러오지 못했습니다: ') + err.message; return; }
   map = L.map('map').setView([36.2, 127.8], 7);
   // 배경: 컬러 일반 지도 (브이월드 Base, 키가 없으면 OpenStreetMap 기본)
   (KEYS.vworld
@@ -236,8 +240,8 @@ document.querySelectorAll('#rlev button').forEach(b => b.onclick = () => {
   map.addLayer(cluster);
   try {
     DATA = await STORE.publicMap();
-    $('#sub').textContent = `담당자 확인 자료 ${DATA.length}건 · ${localStamp(new Date()).slice(0, 16)} 기준`;
-  } catch (err) { $('#sub').textContent = '자료를 불러오지 못했습니다: ' + err.message; }
+    $('#sub').textContent = T('담당자 확인 자료 {n}건 · {t} 기준', { n: DATA.length, t: localStamp(new Date()).slice(0, 16) });
+  } catch (err) { $('#sub').textContent = T('자료를 불러오지 못했습니다: ') + err.message; }
   draw();
 })();
 </script>

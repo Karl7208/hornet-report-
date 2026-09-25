@@ -140,6 +140,7 @@ textarea{min-height:70px;resize:vertical}
 <!-- ================= 응급 화면 ================= -->
 <section class="screen" id="s-sos" aria-label="응급">
   <a class="call119" href="tel:119">📞 119 전화하기</a>
+  <p class="note" id="interp" hidden style="margin:8px 2px 0;font-size:.95rem">119는 영어 등 외국어 통역을 연결해 줍니다. 영어나 모국어로 말하세요.</p>
 
   <div class="whereami" aria-live="polite">
     <div class="lab">119에 이렇게 불러 주세요</div>
@@ -308,11 +309,15 @@ textarea{min-height:70px;resize:vertical}
 </main>
 
 <div class="toast" id="toast" role="status"></div>
+<script src="i18n.js"></script>
 <script src="common.js"></script>
 <script>
 /* =====================================================================
    화면 전환
    ===================================================================== */
+translateDom();
+document.querySelector('header').appendChild(langButton());
+if (LANG === 'en') $('#interp').hidden = false;
 let flow = null;          // 'sting' | 'obs'
 // 화면을 바꿀 때마다 브라우저 기록에 남김 → 폰의 뒤로 가기/스와이프가 앱 안에서 한 단계씩 돌아감
 function show(id){
@@ -328,7 +333,7 @@ history.replaceState({ s: 's-home' }, '', location.pathname + location.search + 
 window.addEventListener('popstate', e => show((e.state && e.state.s) || 's-home'));
 $('#back').onclick = () => (history.state && history.state.s !== 's-home') ? history.back() : show('s-home');
 window.addEventListener('scroll', () => $('header').classList.toggle('scrolled', window.scrollY > 4), { passive: true });
-$('#indexLink').href = INDEX_APP_URL + 'local.html';
+$('#indexLink').href = INDEX_APP_URL + 'local.html?lang=' + LANG;
 let taps = 0; $('#title').onclick = () => { if (++taps >= 5) { taps = 0; openSettings(); } };
 if (/[?&]settings/.test(location.search)) setTimeout(openSettings, 0);
 
@@ -338,24 +343,24 @@ if (/[?&]settings/.test(location.search)) setTimeout(openSettings, 0);
 let sosLoc = null;
 $('#goSos').onclick = () => { go('s-sos'); locateSos(); };
 function locateSos(){
-  $('#sosAddr').textContent = '내 위치를 찾는 중…'; $('#sosCoord').textContent = '';
-  if (!navigator.geolocation) { $('#sosAddr').textContent = '이 기기는 위치를 알려주지 않습니다. 주변 건물이나 도로 이름을 119에 알려 주세요.'; return; }
+  $('#sosAddr').textContent = T('내 위치를 찾는 중…'); $('#sosCoord').textContent = '';
+  if (!navigator.geolocation) { $('#sosAddr').textContent = T('이 기기는 위치를 알려주지 않습니다. 주변 건물이나 도로 이름을 119에 알려 주세요.'); return; }
   navigator.geolocation.getCurrentPosition(async p => {
     sosLoc = { lat: p.coords.latitude, lon: p.coords.longitude, acc: p.coords.accuracy };
-    $('#sosCoord').textContent = `위도 ${sosLoc.lat.toFixed(5)}, 경도 ${sosLoc.lon.toFixed(5)} (오차 약 ${Math.round(sosLoc.acc)}m)`;
-    $('#sosAddr').textContent = '주소 확인 중…';
+    $('#sosCoord').textContent = T('위도 {lat}, 경도 {lon} (오차 약 {acc}m)', { lat: sosLoc.lat.toFixed(5), lon: sosLoc.lon.toFixed(5), acc: Math.round(sosLoc.acc) });
+    $('#sosAddr').textContent = T('주소 확인 중…');
     const g = await regionOf(sosLoc.lat, sosLoc.lon);
     Object.assign(sosLoc, g);
-    $('#sosAddr').textContent = g.address || '주소를 찾지 못했습니다. 아래 위도·경도를 불러 주세요.';
+    $('#sosAddr').textContent = g.address || T('주소를 찾지 못했습니다. 아래 위도·경도를 불러 주세요.');
   }, err => {
-    $('#sosAddr').textContent = err.code === 1 ? '위치 권한이 꺼져 있습니다. 주변 건물·도로·산 이름을 119에 알려 주세요.' : '위치를 찾지 못했습니다. 주변 건물·도로·산 이름을 119에 알려 주세요.';
+    $('#sosAddr').textContent = T(err.code === 1 ? '위치 권한이 꺼져 있습니다. 주변 건물·도로·산 이름을 119에 알려 주세요.' : '위치를 찾지 못했습니다. 주변 건물·도로·산 이름을 119에 알려 주세요.');
   }, { enableHighAccuracy: true, timeout: 15000, maximumAge: 30000 });
 }
 $('#sosRelocate').onclick = locateSos;
 $('#sosCopy').onclick = async () => {
-  if (!sosLoc) { toast('아직 위치를 찾지 못했습니다.'); return; }
-  const t = `${sosLoc.address || ''} (위도 ${sosLoc.lat.toFixed(5)}, 경도 ${sosLoc.lon.toFixed(5)})`.trim();
-  try { await navigator.clipboard.writeText(t); toast('위치를 복사했습니다. 문자로 보낼 수 있습니다.'); } catch { toast(t); }
+  if (!sosLoc) { toast(T('아직 위치를 찾지 못했습니다.')); return; }
+  const t = T('{addr} (위도 {lat}, 경도 {lon})', { addr: sosLoc.address || '', lat: sosLoc.lat.toFixed(5), lon: sosLoc.lon.toFixed(5) }).trim();
+  try { await navigator.clipboard.writeText(t); toast(T('위치를 복사했습니다. 문자로 보낼 수 있습니다.')); } catch { toast(t); }
 };
 $('#goStingForm').onclick = () => startForm('sting');
 $('#goObs').onclick = () => startForm('obs');
@@ -379,13 +384,13 @@ function startForm(kind){
   if (sting) draft.type = '쏘임';
   $('#fWhat').hidden = sting; $('#fSting').hidden = !sting; $('#fPlace').hidden = sting;
   $('#fNest').hidden = !sting;                       // 관측은 '벌집'을 고르면 나타남
-  $('#nestH').textContent = sting ? '벌집이 어디 있었나요? (알면)' : '벌집이 어디에 있나요?';
-  $('#photoH').textContent = sting ? '사진 (선택)' : '사진';
-  $('#photoHint').textContent = sting ? '벌이나 벌집 사진이 있으면 올려 주세요. 없어도 됩니다.' : '사진이 있으면 종까지 확인할 수 있습니다. 최대 3장.';
-  $('#locH').textContent = sting ? '어디서 쏘였나요?' : '어디였나요?';
-  $('#locHint').textContent = sting ? '쏘인 곳을 정해 주세요.' : '사진 찍은 곳이 아니라 벌집이나 말벌이 있던 곳을 정해 주세요.';
-  $('#seenH').textContent = sting ? '언제 쏘였나요?' : '언제 봤나요?';
-  $('#submitBtn').textContent = sting ? '기록 보내기' : '신고하기';
+  $('#nestH').textContent = T(sting ? '벌집이 어디 있었나요? (알면)' : '벌집이 어디에 있나요?');
+  $('#photoH').textContent = T(sting ? '사진 (선택)' : '사진');
+  $('#photoHint').textContent = T(sting ? '벌이나 벌집 사진이 있으면 올려 주세요. 없어도 됩니다.' : '사진이 있으면 종까지 확인할 수 있습니다. 최대 3장.');
+  $('#locH').textContent = T(sting ? '어디서 쏘였나요?' : '어디였나요?');
+  $('#locHint').textContent = T(sting ? '쏘인 곳을 정해 주세요.' : '사진 찍은 곳이 아니라 벌집이나 말벌이 있던 곳을 정해 주세요.');
+  $('#seenH').textContent = T(sting ? '언제 쏘였나요?' : '언제 봤나요?');
+  $('#submitBtn').textContent = T(sting ? '기록 보내기' : '신고하기');
   go('s-form');
   if (sting && sosLoc) setLoc(sosLoc.lat, sosLoc.lon, '현재위치', sosLoc.acc);
 }
@@ -410,7 +415,7 @@ $('#seenDate').onchange = () => { draft.seenSrc = '직접입력'; draft.seenManu
 $('#fileIn').onchange = async e => {
   const files = [...e.target.files].slice(0, 3 - draft.photos.length);
   e.target.value = '';
-  if (!files.length) { toast('사진은 최대 3장까지 올릴 수 있습니다.'); return; }
+  if (!files.length) { toast(T('사진은 최대 3장까지 올릴 수 있습니다.')); return; }
   for (const file of files) {
     const p = { file, fmt: formatOf(file), busy: true };
     draft.photos.push(p); renderPhotos();
@@ -425,27 +430,27 @@ function afterPhoto(p){
   const f = p.fields || {};
   if (f.exif_taken_at && !draft.seenManual) {
     $('#seenDate').value = f.exif_taken_at.slice(0, 10); draft.seenSrc = '사진';
-    $('#seenNote').textContent = '사진 촬영일로 채웠습니다. 다르면 고쳐 주세요.';
+    $('#seenNote').textContent = T('사진 촬영일로 채웠습니다. 다르면 고쳐 주세요.');
   }
   refreshExifBtn();
-  if (!draft.loc && f.exif_lat != null) setLoc(f.exif_lat, f.exif_lon, '사진위치', null, '사진에 남은 위치를 넣었습니다. 다른 곳이면 지도에서 옮겨 주세요.');
+  if (!draft.loc && f.exif_lat != null) setLoc(f.exif_lat, f.exif_lon, '사진위치', null, T('사진에 남은 위치를 넣었습니다. 다른 곳이면 지도에서 옮겨 주세요.'));
 }
 function firstExifLoc(){ const p = draft.photos.find(p => p.fields && p.fields.exif_lat != null); return p ? { lat: p.fields.exif_lat, lon: p.fields.exif_lon } : null; }
 function refreshExifBtn(){ $('#useExifLoc').disabled = !firstExifLoc(); }
-function cell(v){ return v == null || v === '' ? '<span class="none">기록 없음</span>' : esc(v); }
+function cell(v){ return v == null || v === '' ? `<span class="none">${T('기록 없음')}</span>` : esc(v); }
 function labelHTML(f, o){
-  const zoom = f.exif_focal_35mm ? `${f.exif_focal_35mm}mm` + (f.exif_focal_35mm >= 100 ? '<span class="tag">원거리</span>' : '') : null;
-  return `<table><tr><th>촬영일시</th><td>${cell(f.exif_taken_at)}</td></tr>
-    <tr><th>촬영위치</th><td>${f.exif_lat != null ? esc(fmtC(f.exif_lat, f.exif_lon)) : cell(null)}</td></tr>
-    <tr><th>기종</th><td>${cell(f.exif_device)}</td></tr>
-    <tr><th>환산초점</th><td>${zoom || cell(null)}</td></tr>
-    <tr><th>원본</th><td>${esc(o.fmt)} ${(o.size / 1048576).toFixed(1)}MB${o.w ? ` ${o.w}×${o.h}` : ''}</td></tr></table>`;
+  const zoom = f.exif_focal_35mm ? `${f.exif_focal_35mm}mm` + (f.exif_focal_35mm >= 100 ? `<span class="tag">${T('원거리')}</span>` : '') : null;
+  return `<table><tr><th>${T('촬영일시')}</th><td>${cell(f.exif_taken_at)}</td></tr>
+    <tr><th>${T('촬영위치')}</th><td>${f.exif_lat != null ? esc(fmtC(f.exif_lat, f.exif_lon)) : cell(null)}</td></tr>
+    <tr><th>${T('기종')}</th><td>${cell(f.exif_device)}</td></tr>
+    <tr><th>${T('환산초점')}</th><td>${zoom || cell(null)}</td></tr>
+    <tr><th>${T('원본')}</th><td>${esc(o.fmt)} ${(o.size / 1048576).toFixed(1)}MB${o.w ? ` ${o.w}×${o.h}` : ''}</td></tr></table>`;
 }
 function renderPhotos(){
   $('#photoList').innerHTML = draft.photos.map((p, i) => {
-    if (p.busy) return `<div class="specimen"><div style="width:88px;height:88px;background:var(--line);border-radius:8px"></div><div class="label">사진 정보를 읽는 중…</div></div>`;
-    if (p.err) return `<div class="specimen"><div style="width:88px;height:88px;background:var(--line);border-radius:8px"></div><div class="label"><button class="x" data-i="${i}" aria-label="사진 빼기">×</button>${esc(p.file.name)} — 열 수 없음</div></div>`;
-    return `<div class="specimen"><img src="${p.thumb}" alt="올린 사진 ${i + 1}"><div class="label"><button class="x" data-i="${i}" aria-label="사진 빼기">×</button>${labelHTML(p.fields, { fmt: p.fmt, size: p.file.size, w: p.disp?.origW, h: p.disp?.origH })}</div></div>`;
+    if (p.busy) return `<div class="specimen"><div style="width:88px;height:88px;background:var(--line);border-radius:8px"></div><div class="label">${T('사진 정보를 읽는 중…')}</div></div>`;
+    if (p.err) return `<div class="specimen"><div style="width:88px;height:88px;background:var(--line);border-radius:8px"></div><div class="label"><button class="x" data-i="${i}" aria-label="${T('사진 빼기')}">×</button>${esc(p.file.name)} — ${T('열 수 없음')}</div></div>`;
+    return `<div class="specimen"><img src="${p.thumb}" alt=""><div class="label"><button class="x" data-i="${i}" aria-label="${T('사진 빼기')}">×</button>${labelHTML(p.fields, { fmt: p.fmt, size: p.file.size, w: p.disp?.origW, h: p.disp?.origH })}</div></div>`;
   }).join('');
   $('#photoList').querySelectorAll('.x').forEach(b => b.onclick = () => { draft.photos.splice(+b.dataset.i, 1); renderPhotos(); refreshExifBtn(); });
   $('#drop').style.display = draft.photos.length >= 3 ? 'none' : '';
@@ -479,23 +484,23 @@ function renderLoc(){
   const l = draft.loc; if (!l) { $('#locOut').innerHTML = ''; return; }
   let gap = '';
   const e = firstExifLoc();
-  if (e && draft.here && km(e, draft.here) > 1) gap = `<div class="warn">사진 찍은 곳과 지금 위치가 약 ${km(e, draft.here).toFixed(1)}km 떨어져 있습니다. 나중에 올리는 사진이면 "사진 위치"가 맞습니다.</div>`;
-  $('#locOut').innerHTML = `<b>${esc(l.address || '주소 확인 중…')}</b><br>${esc(fmtC(l.lat, l.lon))} (${esc(l.method)}${l.acc ? `, 오차 약 ${Math.round(l.acc)}m` : ''})` + (l.note ? `<div class="note">${esc(l.note)}</div>` : '') + gap;
+  if (e && draft.here && km(e, draft.here) > 1) gap = `<div class="warn">${esc(T('사진 찍은 곳과 지금 위치가 약 {km}km 떨어져 있습니다. 나중에 올리는 사진이면 "사진 위치"가 맞습니다.', { km: km(e, draft.here).toFixed(1) }))}</div>`;
+  $('#locOut').innerHTML = `<b>${esc(l.address || T('주소 확인 중…'))}</b><br>${esc(fmtC(l.lat, l.lon))} (${esc(TV(l.method))}${l.acc ? ', ' + esc(T('오차 약 {m}m', { m: Math.round(l.acc) })) : ''})` + (l.note ? `<div class="note">${esc(l.note)}</div>` : '') + gap;
 }
 $('#useExifLoc').onclick = () => { const e = firstExifLoc(); if (e) setLoc(e.lat, e.lon, '사진위치'); };
-$('#pickMap').onclick = async () => { try { await ensureMini(); toast('지도를 눌러 위치를 정하세요.'); } catch (err) { toast(err.message); } };
+$('#pickMap').onclick = async () => { try { await ensureMini(); toast(T('지도를 눌러 위치를 정하세요.')); } catch (err) { toast(err.message); } };
 $('#useHere').onclick = () => {
-  if (!navigator.geolocation) { toast('이 기기는 위치를 알려주지 않습니다.'); return; }
-  toast('현재 위치를 찾는 중…');
+  if (!navigator.geolocation) { toast(T('이 기기는 위치를 알려주지 않습니다.')); return; }
+  toast(T('현재 위치를 찾는 중…'));
   navigator.geolocation.getCurrentPosition(p => { draft.here = { lat: p.coords.latitude, lon: p.coords.longitude }; setLoc(p.coords.latitude, p.coords.longitude, '현재위치', p.coords.accuracy); },
-    err => toast(err.code === 1 ? '위치 권한이 꺼져 있습니다. 지도나 주소로 정해 주세요.' : '현재 위치를 찾지 못했습니다.'),
+    err => toast(T(err.code === 1 ? '위치 권한이 꺼져 있습니다. 지도나 주소로 정해 주세요.' : '현재 위치를 찾지 못했습니다.')),
     { enableHighAccuracy: true, timeout: 15000, maximumAge: 0 });
 };
 async function addrSearch(){
   const q = $('#addrQ').value.trim(); if (!q) return;
-  $('#addrRes').innerHTML = '<div class="note">찾는 중…</div>';
+  $('#addrRes').innerHTML = `<div class="note">${T('찾는 중…')}</div>`;
   const a = await searchPlace(q);
-  if (!a.length) { $('#addrRes').innerHTML = '<div class="note">결과가 없습니다. 읍·면·리 이름이나 건물 이름으로 다시 찾거나 지도에서 정해 주세요.</div>'; return; }
+  if (!a.length) { $('#addrRes').innerHTML = `<div class="note">${T('결과가 없습니다. 읍·면·리 이름이나 건물 이름으로 다시 찾거나 지도에서 정해 주세요.')}</div>`; return; }
   $('#addrRes').innerHTML = a.map((x, i) => `<button type="button" data-i="${i}">${esc(x.label)}</button>`).join('');
   $('#addrRes').querySelectorAll('button').forEach(b => b.onclick = () => { const x = a[+b.dataset.i]; $('#addrRes').innerHTML = ''; setLoc(x.lat, x.lon, '주소검색'); });
 }
@@ -505,10 +510,10 @@ $('#addrQ').onkeydown = e => { if (e.key === 'Enter') addrSearch(); };
 /* ---------- 보내기 ---------- */
 $('#submitBtn').onclick = async () => {
   const sting = flow === 'sting';
-  if (!sting && !draft.type) { toast('벌집인지 말벌인지 골라 주세요.'); window.scrollTo(0, 0); return; }
-  if (draft.photos.some(p => p.busy)) { toast('사진 정보를 읽는 중입니다. 잠시 후 다시 눌러 주세요.'); return; }
-  if (!draft.loc) { toast('위치를 정해 주세요.'); return; }
-  const btn = $('#submitBtn'); btn.disabled = true; const label = btn.textContent; btn.textContent = '보내는 중…';
+  if (!sting && !draft.type) { toast(T('벌집인지 말벌인지 골라 주세요.')); window.scrollTo(0, 0); return; }
+  if (draft.photos.some(p => p.busy)) { toast(T('사진 정보를 읽는 중입니다. 잠시 후 다시 눌러 주세요.')); return; }
+  if (!draft.loc) { toast(T('위치를 정해 주세요.')); return; }
+  const btn = $('#submitBtn'); btn.disabled = true; const label = btn.textContent; btn.textContent = T('보내는 중…');
   try {
     const now = new Date(), ymd = localDate(now).replace(/-/g, '');
     const report_id = `R-${ymd}-${rand(4)}`;
@@ -545,12 +550,12 @@ $('#submitBtn').onclick = async () => {
     await STORE.saveReport(report, media, blobs);
     $('#doneNo').textContent = report_id;
     const rg = [report.sido, report.sigungu].filter(Boolean).join(' ');
-    $('#doneLocal').href = `${INDEX_APP_URL}local.html?${rg ? 'r=' + encodeURIComponent(rg) + '&' : ''}lat=${report.lat.toFixed(4)}&lon=${report.lon.toFixed(4)}`;
+    $('#doneLocal').href = `${INDEX_APP_URL}local.html?${rg ? 'r=' + encodeURIComponent(rg) + '&' : ''}lat=${report.lat.toFixed(4)}&lon=${report.lon.toFixed(4)}&lang=${LANG}`;
     $('#doneMsg').textContent = sting
-      ? '기록해 주셔서 감사합니다. 몸 상태가 나빠지면 바로 119에 전화하세요.'
-      : (report.priority ? '사람이나 꿀벌 가까이 있는 신고라 먼저 확인합니다. ' : '') + '전문가가 2일 안에 확인하고, 결과는 "내 신고"에서 볼 수 있습니다. 벌집은 직접 없애지 마세요.';
+      ? T('기록해 주셔서 감사합니다. 몸 상태가 나빠지면 바로 119에 전화하세요.')
+      : (report.priority ? T('사람이나 꿀벌 가까이 있는 신고라 먼저 확인합니다. ') : '') + T('전문가가 2일 안에 확인하고, 결과는 "내 신고"에서 볼 수 있습니다. 벌집은 직접 없애지 마세요.');
     go('s-done', true);             // 양식 화면을 완료 화면으로 바꿔치기 → 뒤로 가기로 같은 신고를 다시 보내지 않게
-  } catch (err) { toast('보내지 못했습니다: ' + err.message); }
+  } catch (err) { toast(T('보내지 못했습니다: ') + err.message); }
   btn.disabled = false; btn.textContent = label;
 };
 $('#doneHome').onclick = () => go('s-home', true);
@@ -562,20 +567,20 @@ $('#goMine').onclick = () => openMine();
    ===================================================================== */
 const STATUS_TEXT = { '접수': '확인 대기', '승인': '확인됨', '반려': '반려' };
 async function openMine(){
-  go('s-mine'); $('#mineList').innerHTML = '<div class="empty">불러오는 중…</div>';
+  go('s-mine'); $('#mineList').innerHTML = `<div class="empty">${T('불러오는 중…')}</div>`;
   try {
     const rs = await STORE.myReports(UID);
-    if (!rs.length) { $('#mineList').innerHTML = '<div class="empty">아직 보낸 신고가 없습니다.</div>'; return; }
+    if (!rs.length) { $('#mineList').innerHTML = `<div class="empty">${T('아직 보낸 신고가 없습니다.')}</div>`; return; }
     $('#mineList').innerHTML = rs.map(r => {
       const extra = r.status === '승인'
-        ? [r.species && r.species !== '판별불가' ? r.species : null, r.report_type === '벌집' && r.nest_status ? `둥지 ${r.nest_status}` : null].filter(Boolean).join(' · ')
-        : r.status === '반려' ? (r.reject_reason || '') : '';
-      return `<div class="item"><div><div class="t"><span style="color:${TYPE_COLOR[r.report_type] || '#888'}">●</span> ${esc(TYPE_NAME[r.report_type] || r.report_type)}</div>
+        ? [r.species && r.species !== '판별불가' ? TS(r.species) : null, r.report_type === '벌집' && r.nest_status ? T('둥지 {s}', { s: TV(r.nest_status) }) : null].filter(Boolean).join(' · ')
+        : r.status === '반려' ? TV(r.reject_reason || '') : '';
+      return `<div class="item"><div><div class="t"><span style="color:${TYPE_COLOR[r.report_type] || '#888'}">●</span> ${esc(T(TYPE_NAME[r.report_type] || r.report_type))}</div>
         <div class="s">${esc(r.seen_date)} ${esc(r.address || fmtC(r.lat, r.lon))}</div>
         <div class="s">${esc(r.report_id)}${extra ? ' · ' + esc(extra) : ''}</div></div>
-        <span class="st ${esc(r.status)}">${esc(STATUS_TEXT[r.status] || r.status)}</span></div>`;
+        <span class="st ${esc(r.status)}">${esc(T(STATUS_TEXT[r.status] || r.status))}</span></div>`;
     }).join('');
-  } catch (err) { $('#mineList').innerHTML = `<div class="empty">불러오지 못했습니다: ${esc(err.message)}</div>`; }
+  } catch (err) { $('#mineList').innerHTML = `<div class="empty">${T('불러오지 못했습니다: ')}${esc(err.message)}</div>`; }
 }
 
 /* =====================================================================
@@ -600,17 +605,17 @@ async function showIndexStage(el){
     const m = await (await withTimeout(fetch(INDEX_APP_URL + 'data/latest/meta.json?v=' + Date.now()), 6000)).json();
     if (!m.national_stage) return;
     const d = new Date(m.date); const md = `${d.getMonth() + 1}/${d.getDate()}`;
-    const tip = { '관심': '말벌 활동이 적은 시기입니다.', '주의': '말벌 활동이 시작됐습니다. 벌초·산행 때 주의하세요.',
-                  '경계': '말벌 활동이 활발합니다. 벌초·산행 전 주변을 살피세요.', '심각': '말벌 활동이 매우 활발합니다. 산·들 작업을 조심하세요.' }[m.national_stage] || '';
-    el.innerHTML = `<a href="${INDEX_APP_URL}" target="_blank" rel="noopener" style="display:flex;gap:10px;align-items:center;text-decoration:none;color:inherit">
-      <span style="flex:none;background:${STAGE_COLOR[m.national_stage] || '#5C6962'};color:#fff;font-weight:700;border-radius:6px;padding:4px 10px">${esc(m.national_stage)}</span>
-      <span style="flex:1"><b>이번 주 말벌 활동</b> (${md} 기상 기준)<br><span style="font-size:.88em;opacity:.85">${esc(tip)}</span></span>
-      <span style="flex:none;font-size:.85em;text-decoration:underline">지수 지도</span></a>`;
+    const tip = T({ '관심': '말벌 활동이 적은 시기입니다.', '주의': '말벌 활동이 시작됐습니다. 벌초·산행 때 주의하세요.',
+                  '경계': '말벌 활동이 활발합니다. 벌초·산행 전 주변을 살피세요.', '심각': '말벌 활동이 매우 활발합니다. 산·들 작업을 조심하세요.' }[m.national_stage] || '');
+    el.innerHTML = `<a href="${INDEX_APP_URL}local.html?lang=${LANG}" target="_blank" rel="noopener" style="display:flex;gap:10px;align-items:center;text-decoration:none;color:inherit">
+      <span style="flex:none;background:${STAGE_COLOR[m.national_stage] || '#5C6962'};color:#fff;font-weight:700;border-radius:6px;padding:4px 10px">${esc(T(m.national_stage))}</span>
+      <span style="flex:1"><b>${T('이번 주 말벌 활동')}</b> (${md} ${T('기상 기준')})<br><span style="font-size:.88em;opacity:.85">${esc(tip)}</span></span>
+      <span style="flex:none;font-size:.85em;text-decoration:underline">${T('지수 지도')}</span></a>`;
     el.hidden = false;
   } catch {}
 }
 showIndexStage($('#idxStage'));
-initStore($('#modeLine'));
+initStore($('#modeLine')).then(() => translateDom($('#modeLine')));
 </script>
 </body>
 </html>
