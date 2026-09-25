@@ -92,8 +92,7 @@ th,td{padding:4px 3px;border-bottom:1px solid var(--line);text-align:right} th:f
     <h2>말벌 활동 지수 (기상 기반)</h2>
     <div class="line" style="color:var(--muted)">날씨로 계산한 말벌 활동 위험과 앞으로 2주 흐름입니다.</div>
     <div style="display:flex;gap:6px;flex-wrap:wrap;margin-top:6px">
-      <a class="btn" id="idxLocal" target="_blank" rel="noopener">우리 지역 (시민용)</a>
-      <a class="btn" id="idxAll" target="_blank" rel="noopener">전국 (담당자용)</a>
+      <a class="btn" id="idxLocal" target="_blank" rel="noopener">우리 지역 말벌 활동 보기</a>
     </div>
     <div class="safety">벌집을 발견하면 직접 없애지 말고 멀리 떨어진 뒤 119에 제거를 요청하세요. 쏘인 뒤 어지럽거나 숨이 차면 바로 119.</div>
     <p class="note">담당자가 사진과 내용을 확인한 신고만 표시합니다 (2일 단위 갱신). 개인 정보 보호를 위해 위치는 약 1km 단위로 표시하며, 정확한 주소는 공개하지 않습니다.</p>
@@ -106,7 +105,7 @@ th,td{padding:4px 3px;border-bottom:1px solid var(--line);text-align:right} th:f
 translateDom();
 document.querySelector('header').appendChild(langButton());
 $('#indexLink').href = INDEX_APP_URL + 'local.html?lang=' + LANG;
-$('#idxLocal').href = INDEX_APP_URL + 'local.html?lang=' + LANG; $('#idxAll').href = INDEX_APP_URL;
+$('#idxLocal').href = INDEX_APP_URL + 'local.html?lang=' + LANG;
 document.querySelector('a[href="index.html"]').href = 'index.html?lang=' + LANG;
 /* 말벌 활동 지수 앱의 이번 주 전국 단계 (같은 github.io 주소라 바로 읽힘, 실패해도 조용히 숨김) */
 const STAGE_COLOR = { '관심': '#5C6962', '주의': '#B7800F', '경계': '#D2691E', '심각': '#B0001E' };

@@ -94,6 +94,7 @@ select{font:inherit;padding:8px;border:1px solid var(--line);border-radius:7px;b
         <dt>반려사유</dt><dd>말벌 아님 / 대상 없음 / 사진 불량 / 중복 / 위치 오류 / 부적절</dd>
         <dt>종</dt><dd>등검은말벌 / 장수말벌 / 꼬마장수말벌 / 좀말벌 / 털보말벌 / 검정말벌 / 말벌 / 판별불가</dd>
         <dt>판별근거</dt><dd>개체확인 / 둥지형태추정 / 사진없음</dd>
+        <dt>유형</dt><dd>시민이 잘못 골랐으면 고쳐서 올림: 벌집 / 말벌 / 쏘임</dd>
       </dl>
     </details>
   </div>
@@ -179,6 +180,12 @@ const batchId = () => { const d = new Date(); return `B-${localDate(d).replace(/
 const REJECT_REASONS = ['말벌 아님', '대상 없음', '사진 불량', '중복', '위치 오류', '부적절'];
 const BASES = ['개체확인', '둥지형태추정', '사진없음'];
 const NEST_STATES = ['활동중', '제거됨', '사라짐'];
+/* 엑셀이 바꿔 놓는 날짜 모양(2026/9/25, 2026. 9. 25., 20260925)을 2026-09-25로 */
+function normDate(s){
+  s = (s || '').trim(); if (!s) return '';
+  let m = s.match(/^(\d{4})\s*[-/.]\s*(\d{1,2})\s*[-/.]\s*(\d{1,2})\.?$/) || s.match(/^(\d{4})(\d{2})(\d{2})$/);
+  return m ? `${m[1]}-${String(m[2]).padStart(2, '0')}-${String(m[3]).padStart(2, '0')}` : s;
+}
 const kakao = r => `https://map.kakao.com/link/map/${encodeURIComponent(r.report_id)},${r.lat},${r.lon}`;
 let ALL = [], MEDIA = [];
 
@@ -272,6 +279,8 @@ $('#qUp').onchange = async e => {
     if (!j) continue;
     if (!['승인', '반려'].includes(j)) { errs.push(`${i + 2}행 ${id}: 판정 "${j}" → 승인 또는 반려`); continue; }
     let sp = (x['종'] || '').trim(), basis = (x['판별근거'] || '').trim(), reason = (x['반려사유'] || '').trim();
+    const ty = (x['유형'] || '').trim() || r.report_type;          // 시민이 유형을 잘못 골랐으면 담당자가 고침
+    if (!['벌집', '말벌', '쏘임'].includes(ty)) { errs.push(`${i + 2}행 ${id}: 유형 "${ty}" → 벌집 / 말벌 / 쏘임`); continue; }
     let status = j;
     if (sp === '말벌 아님') { status = '반려'; reason = reason || '말벌 아님'; }
     if (status === '승인') {
@@ -282,7 +291,8 @@ $('#qUp').onchange = async e => {
     const patch = { status, reviewer: who(), reviewed_at: new Date().toISOString(), review_note: x['검수메모'] || null,
       species: status === '승인' ? sp : (sp === '말벌 아님' ? sp : null), species_basis: status === '승인' ? (basis || null) : null,
       reject_reason: status === '반려' ? (reason || '사유 없음') : null };
-    if (status === '승인' && r.report_type === '벌집' && !r.nest_status) { patch.nest_status = '활동중'; patch.nest_status_at = r.seen_date; }
+    if (ty !== r.report_type) { patch.report_type = ty; patch.track = ty === '쏘임' ? '응급' : '관측'; }
+    if (status === '승인' && ty === '벌집' && !r.nest_status) { patch.nest_status = '활동중'; patch.nest_status_at = r.seen_date; }
     plan.push({ id, r, patch, redo: r.status !== '접수' });
   }
   showPlan($('#qPreview'), f.name, plan, errs, '검수', async (batch) => {
@@ -351,8 +361,8 @@ $('#nUp').onchange = async e => {
     const r = byId[id];
     if (!r) { errs.push(`${i + 2}행 ${id}: 서버에 없는 신고번호`); continue; }
     if (!NEST_STATES.includes(s)) { errs.push(`${i + 2}행 ${id}: 둥지상태 "${s}" → ${NEST_STATES.join(' / ')}`); continue; }
-    const d = (x['처리일'] || '').trim() || today();
-    if (!/^\d{4}-\d{2}-\d{2}$/.test(d)) { errs.push(`${i + 2}행 ${id}: 처리일 "${d}" → 2026-09-25 형식`); continue; }
+    const d = normDate(x['처리일']) || today();
+    if (!/^\d{4}-\d{2}-\d{2}$/.test(d)) { errs.push(`${i + 2}행 ${id}: 처리일 "${x['처리일']}" → 2026-09-25 형식`); continue; }
     plan.push({ id, r, patch: { nest_status: s, nest_status_at: d, nest_handler: x['처리주체'] || null,
       review_note: [r.review_note, x['처리메모']].filter(Boolean).join(' / ') || null } });
   }

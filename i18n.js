@@ -138,7 +138,7 @@ const EN = {
   '지역별 (활동 벌집·쏘임 많은 순)': 'By area (most active nests and stings)', '시군구': 'City / county', '시도': 'Province',
   '말벌 활동 지수 (기상 기반)': 'Hornet activity index (weather-based)',
   '날씨로 계산한 말벌 활동 위험과 앞으로 2주 흐름입니다.': 'Hornet activity risk calculated from the weather, with a 2-week outlook.',
-  '우리 지역 (시민용)': 'My area', '전국 (담당자용)': 'Nationwide (staff)',
+  '우리 지역 말벌 활동 보기': 'See hornet activity near me',
   '벌집을 발견하면 직접 없애지 말고 멀리 떨어진 뒤 119에 제거를 요청하세요. 쏘인 뒤 어지럽거나 숨이 차면 바로 119.':
     'If you find a nest, do not remove it — move away and call 119. If you feel dizzy or short of breath after a sting, call 119 at once.',
   '담당자가 사진과 내용을 확인한 신고만 표시합니다 (2일 단위 갱신). 개인 정보 보호를 위해 위치는 약 1km 단위로 표시하며, 정확한 주소는 공개하지 않습니다.':
