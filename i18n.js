@@ -18,7 +18,8 @@ const EN = {
   '신고하기': 'Report', '불러오는 중…': 'Loading…', '저장소:': 'Storage:', '이 기기 (시연)': 'this device (demo)', '저장소 연결 중…': 'Connecting…',
 
   /* 첫 화면 */
-  '벌에 쏘였어요': 'I have been stung', '벌이 공격하고 있어요': 'Bees or hornets are attacking',
+  '벌집·말벌 신고': 'Report a nest or hornet', '홈': 'Home', '발생 지도': 'Map', '우리 지역': 'My area', '메뉴': 'Menu',
+  '벌에 쏘였어요': 'I got stung', '벌이 공격하고 있어요': 'Bees or hornets are attacking',
   '119 연결 · 응급처치 · 내 위치 안내': 'Call 119 · First aid · Show my location',
   '벌집이나 말벌을 봤어요': 'I saw a nest or hornets',
   '사진으로 신고하면 2일 안에 전문가가 확인합니다': 'Send a photo — an expert checks it within 2 days',
