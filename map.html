@@ -51,11 +51,18 @@ th,td{padding:4px 3px;border-bottom:1px solid var(--line);text-align:right} th:f
 .pin.sting{background:var(--red);border-radius:3px;transform:rotate(45deg)}
 .cl{display:flex;align-items:center;justify-content:center;border-radius:50%;color:#fff;font-weight:700;font-size:.8rem;border:2px solid #fff;box-shadow:0 0 0 1px rgba(0,0,0,.3)}
 .leaflet-popup-content{font-size:.86rem;line-height:1.5}
+.switch{display:inline-flex;border:1px solid var(--line);border-radius:9px;overflow:hidden}
+.switch a{padding:8px 12px;font-size:.88rem;text-decoration:none;color:var(--ink);background:var(--surface);white-space:nowrap}
+.switch a[aria-current="page"]{background:var(--ink);color:var(--bg);font-weight:700}
 </style>
 </head>
 <body>
 <header>
   <h1><span class="stripe"></span>말벌 발생 현황</h1>
+  <nav class="switch" aria-label="자료 선택">
+    <a href="map.html" aria-current="page">올해 시민 신고</a>
+    <a href="history.html" id="swPast">지난 소방 출동</a>
+  </nav>
   <span class="sub" id="sub">불러오는 중…</span>
   <a class="btn red" href="index.html">신고하기</a>
   <a class="btn" id="indexLink" target="_blank" rel="noopener">우리 지역 말벌 활동</a>
@@ -107,6 +114,7 @@ document.querySelector('header').appendChild(langButton());
 $('#indexLink').href = INDEX_APP_URL + 'local.html?lang=' + LANG;
 $('#idxLocal').href = INDEX_APP_URL + 'local.html?lang=' + LANG;
 document.querySelector('a[href="index.html"]').href = 'index.html?lang=' + LANG;
+document.getElementById('swPast').href = 'history.html?lang=' + LANG;
 /* 말벌 활동 지수 앱의 이번 주 전국 단계 (같은 github.io 주소라 바로 읽힘, 실패해도 조용히 숨김) */
 const STAGE_COLOR = { '관심': '#5C6962', '주의': '#B7800F', '경계': '#D2691E', '심각': '#B0001E' };
 async function showIndexStage(el){

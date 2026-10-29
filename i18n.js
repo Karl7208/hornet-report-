@@ -155,6 +155,29 @@ const EN = {
   '기간 안에 종까지 확인된 신고가 없습니다.': 'No species confirmed in this period.',
   '지역': 'Area', '활동 벌집': 'Active', '처리': 'Resolved', '지역 미상': 'unknown area',
   '표시할 자료가 없습니다.': 'Nothing to show.', '지도를 불러오지 못했습니다: ': 'Could not load the map: ',
+  /* 지난 소방 출동 (history.html) */
+  '지난 벌집 제거 출동': 'Past nest removals', '자료 선택': 'Data', '올해 시민 신고': 'Reports this year', '지난 소방 출동': 'Fire dept. records',
+  '연도': 'Year', '월': 'Month', '전체': 'All', '{m}월': '{m}', '지도 기준': 'Map shows', '출동 건수': 'Callouts', '면적 100㎢당': 'Per 100 km²',
+  '현황': 'Overview', '월별 출동': 'Callouts by month', '전국': 'Nationwide', '전국 보기': 'Show nationwide',
+  '진한 막대가 선택한 기간입니다. 막대를 누르면 그 달로 바뀝니다.': 'Dark bars are the selected period. Tap a bar to jump to that month.',
+  '출동이 많은 지역': 'Areas with most callouts', '건수': 'Count', '비율': 'Share', '출동 장소': 'Where',
+  '전체 기간 (2022.3~2026.8)': 'All years (Mar 2022 – Aug 2026)', '전 기간 {m}월 합계': 'Month {m}, all years', '{y}년': '{y}', '{y}년 {m}월': '{y}-{m}',
+  '100㎢당 {n}건': '{n} per 100 km²', '{n}건': '{n}', '100㎢당 건수': 'Callouts per 100 km²', '이상': 'or more', '100㎢당': 'Per 100 km²',
+  '2022년은 3~12월 자료입니다 (벌집 제거 분류가 3월부터 적용).': '2022 covers March–December only (the nest-removal code started in March).',
+  '2026년은 1~8월 자료입니다. 다른 해와 연간 합계를 직접 비교하지 마세요.': '2026 covers January–August only. Do not compare its total with full years.',
+  '이 달은 2022년 또는 2026년 자료가 없어 합계에 포함된 해가 다릅니다.': 'This month is missing for 2022 or 2026, so its total covers fewer years.',
+  '전국 출동': 'Callouts nationwide', '{r} 출동': 'Callouts in {r}', '가장 많은 시군구': 'Top city/county', '이 지역 최다 월': 'Busiest month here', '전국 최다 월': 'Busiest month nationwide',
+  '월별 출동 건수 막대그래프': 'Bar chart of monthly callouts',
+  '출동 장소 · {r} (전 기간)': 'Where · {r} (all years)', '출동 장소 · 전국 (전 기간)': 'Where · nationwide (all years)', '출동 장소 · 전국 ({y}년)': 'Where · nationwide ({y})',
+  '소방청 벌집 제거 출동 {n}건 · 2022.3~2026.8': '{n} fire-dept. nest removals · Mar 2022 – Aug 2026',
+  '자료: 소방청 구조·생활안전활동 기록지(정보공개청구, 2022.3~2026.8), 공식 사고원인 "벌(집)제거" 출동 건수. 말벌 외 벌집 제거도 포함될 수 있습니다.':
+    'Source: National Fire Agency rescue and safety-service records (information disclosure request, Mar 2022 – Aug 2026), callouts coded "bee/nest removal". May include nests of bees other than hornets.',
+  '시군구 경계는 2023년 기준이며, 이후 새로 생긴 구(화성시·부천시 일반구, 인천 검단·영종·제물포·서해구)는 이전 시군구에 합쳤습니다. 시군구가 비어 있는 {n}건은 시도 합계에만 들어갑니다.':
+    'Boundaries are as of 2023; districts created later (Hwaseong and Bucheon wards, Incheon Geomdan/Yeongjong/Jemulpo/Seohae) are merged into their former areas. {n} records without a city/county count toward province totals only.',
+  '개인 식별을 막기 위해 시군구·월 단위 건수만 공개합니다.': 'To protect privacy, only monthly counts by city/county are shown.',
+  '소방청': 'Fire agency',
+  '단독주택': 'Detached house', '공동주택': 'Apartment / multi-unit', '근린생활시설': 'Shops & services', '공장ㆍ창고': 'Factory / warehouse', '도로': 'Road',
+  '교육·연구시설': 'School / research', '논·밭': 'Farmland', '산': 'Mountain / forest', '업무시설': 'Office', '숙박시설': 'Lodging', '문화 및 집회시설': 'Culture & parks',
   '담당자 확인 자료 {n}건 · {t} 기준': '{n} checked reports · as of {t}', '자료를 불러오지 못했습니다: ': 'Could not load data: ',
 };
 

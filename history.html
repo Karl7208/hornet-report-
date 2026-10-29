@@ -1,0 +1,338 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>지난 벌집 제거 출동</title>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans+KR:wght@400;500;700&display=swap" media="print" onload="this.media='all'">
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.css">
+<style>
+:root{--bg:#F1F3F0;--surface:#fff;--ink:#1B2420;--muted:#5C6962;--line:#D3DAD4;--pine:#22463A;--amber:#E3A21A;--red:#C62828;
+  --c0:#f0efec;--c1:#fde7c2;--c2:#f9c97d;--c3:#f2a446;--c4:#e07b23;--c5:#b85614;--c6:#7f340c;--bar:#c9cfca;--bar-on:#b85614;
+  font-family:"IBM Plex Sans KR",system-ui,-apple-system,"Apple SD Gothic Neo","Malgun Gothic",sans-serif}
+@media (prefers-color-scheme:dark){:root:not([data-theme="light"]){--bg:#111613;--surface:#19201C;--ink:#E4EAE6;--muted:#98A69E;--line:#2B3630;--pine:#7FC2A5;--bar:#3a463f;--bar-on:#f2a446}}
+*{box-sizing:border-box} html,body{margin:0;height:100%}
+body{background:var(--bg);color:var(--ink);display:grid;grid-template-rows:auto 1fr;padding-top:env(safe-area-inset-top,0px)}
+header{display:flex;flex-wrap:wrap;gap:8px 12px;align-items:center;padding:10px 14px;background:var(--surface);border-bottom:1px solid var(--line)}
+header h1{margin:0;font-size:1.1rem;display:flex;gap:10px;align-items:center}
+.stripe{width:26px;height:13px;border-radius:3px;background:repeating-linear-gradient(135deg,var(--amber) 0 5px,#1B2420 5px 10px)}
+header .sub{font-size:.8rem;color:var(--muted);flex:1;min-width:180px}
+.btn{display:inline-flex;align-items:center;gap:6px;padding:8px 12px;border-radius:8px;border:1px solid var(--line);background:var(--surface);color:var(--ink);font:inherit;font-size:.9rem;font-weight:500;text-decoration:none;white-space:nowrap;cursor:pointer}
+.btn.red{background:var(--red);border-color:var(--red);color:#fff}
+.switch{display:inline-flex;border:1px solid var(--line);border-radius:9px;overflow:hidden}
+.switch a{padding:8px 12px;font-size:.88rem;text-decoration:none;color:var(--ink);background:var(--surface);white-space:nowrap}
+.switch a[aria-current="page"]{background:var(--ink);color:var(--bg);font-weight:700}
+.wrap{display:grid;grid-template-columns:1fr 360px;min-height:0}
+#map{height:100%;min-height:380px;background:#eef1ed}
+aside{overflow:auto;padding:12px 14px 24px;background:var(--surface);border-left:1px solid var(--line)}
+@media (max-width:820px){.wrap{grid-template-columns:1fr;grid-template-rows:56vh auto}aside{border-left:0;border-top:1px solid var(--line)}}
+h2{font-size:.95rem;margin:16px 0 8px}
+h2:first-child{margin-top:2px}
+.seg{display:flex;gap:4px;flex-wrap:wrap}
+.seg button{flex:1;min-width:0;padding:7px 4px;border:1px solid var(--line);background:transparent;color:var(--ink);border-radius:7px;font:inherit;font-size:.85rem;cursor:pointer;font-variant-numeric:tabular-nums}
+.seg button[aria-pressed=true]{background:var(--ink);color:var(--bg);border-color:var(--ink);font-weight:700}
+.months{display:grid;grid-template-columns:repeat(7,1fr);gap:4px}
+.months button{padding:7px 0}
+.warn{font-size:.8rem;color:#8a5a00;background:#fdf3d8;border-radius:8px;padding:6px 9px;margin-top:8px}
+@media (prefers-color-scheme:dark){.warn{color:#f3d48a;background:#3a3220}}
+.kpis{display:grid;grid-template-columns:1fr 1fr;gap:8px}
+.kpi{border:1px solid var(--line);border-radius:10px;padding:8px 10px;min-width:0}
+.kpi b{display:block;font-size:1.3rem;font-variant-numeric:tabular-nums;line-height:1.25;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.kpi span{font-size:.78rem;color:var(--muted)}
+.kpi.wide{grid-column:1/-1}
+.selbox{display:flex;align-items:center;gap:8px;border:1px solid var(--line);border-radius:10px;padding:8px 10px;font-size:.9rem}
+.selbox b{flex:1}
+.selbox button{border:0;background:none;color:var(--muted);font:inherit;font-size:.82rem;cursor:pointer;text-decoration:underline}
+#chart{position:relative}
+#chart svg{display:block;width:100%;height:auto}
+.tip{position:absolute;pointer-events:none;background:var(--ink);color:var(--bg);font-size:.78rem;padding:4px 7px;border-radius:6px;white-space:nowrap;transform:translate(-50%,-110%);display:none;font-variant-numeric:tabular-nums}
+table{width:100%;border-collapse:collapse;font-size:.84rem;font-variant-numeric:tabular-nums}
+th,td{padding:5px 3px;border-bottom:1px solid var(--line);text-align:right}
+th{font-weight:500;color:var(--muted);font-size:.78rem}
+th:nth-child(2),td:nth-child(2){text-align:left}
+td:first-child{color:var(--muted);width:24px}
+tbody tr{cursor:pointer} tbody tr:hover{background:color-mix(in srgb,var(--amber) 12%,transparent)}
+tbody tr.on{background:color-mix(in srgb,var(--amber) 22%,transparent)}
+.bars .r{display:grid;grid-template-columns:96px 1fr 56px;gap:6px;align-items:center;font-size:.82rem;margin:4px 0}
+.bars .t{height:10px;border-radius:0 4px 4px 0;background:var(--c4)}
+.bars .v{text-align:right;color:var(--muted);font-variant-numeric:tabular-nums}
+.note{font-size:.78rem;color:var(--muted);line-height:1.55;margin-top:14px}
+.legend{background:var(--surface);color:var(--ink);padding:8px 10px;border-radius:8px;box-shadow:0 1px 4px rgba(0,0,0,.25);font-size:.76rem;line-height:1.5;font-variant-numeric:tabular-nums}
+.legend .lt{font-weight:700;margin-bottom:4px;font-size:.8rem}
+.legend i{display:inline-block;width:16px;height:11px;margin-right:6px;vertical-align:-1px;border:1px solid rgba(0,0,0,.18)}
+.gray-tiles{filter:grayscale(1) contrast(1.02) brightness(1.06)}
+.leaflet-tooltip{font:inherit;font-size:.82rem}
+</style>
+</head>
+<body>
+<header>
+  <h1><span class="stripe"></span>말벌 발생 현황</h1>
+  <nav class="switch" aria-label="자료 선택">
+    <a href="map.html" id="swNow">올해 시민 신고</a>
+    <a href="history.html" aria-current="page">지난 소방 출동</a>
+  </nav>
+  <span class="sub" id="sub">불러오는 중…</span>
+  <a class="btn red" href="index.html" id="goReport">신고하기</a>
+</header>
+<div class="wrap">
+  <div id="map"></div>
+  <aside>
+    <h2>연도</h2>
+    <div class="seg" id="years"></div>
+    <h2>월</h2>
+    <div class="seg months" id="months"></div>
+    <div class="warn" id="partial" hidden></div>
+
+    <h2>지도 기준</h2>
+    <div class="seg" id="measure">
+      <button type="button" data-v="count" aria-pressed="true">출동 건수</button>
+      <button type="button" data-v="area" aria-pressed="false">면적 100㎢당</button>
+    </div>
+
+    <h2 id="kpiTitle">현황</h2>
+    <div class="kpis" id="kpis"></div>
+
+    <h2>월별 출동</h2>
+    <div class="selbox" id="selbox"><b id="selName">전국</b><button type="button" id="selClear" hidden>전국 보기</button></div>
+    <div id="chart"><div class="tip" id="tip"></div></div>
+    <p class="note" style="margin-top:4px" id="chartNote">진한 막대가 선택한 기간입니다. 막대를 누르면 그 달로 바뀝니다.</p>
+
+    <h2 id="rankTitle">출동이 많은 지역</h2>
+    <div class="seg" id="rankLevel" style="margin-bottom:6px">
+      <button type="button" data-v="sgg" aria-pressed="true">시군구</button>
+      <button type="button" data-v="sido" aria-pressed="false">시도</button>
+    </div>
+    <table><thead><tr><th>#</th><th>지역</th><th id="rankUnit">건수</th><th>비율</th></tr></thead><tbody id="rank"></tbody></table>
+
+    <h2 id="placeTitle">출동 장소</h2>
+    <div class="bars" id="places"></div>
+
+    <p class="note" id="srcNote"></p>
+  </aside>
+</div>
+<script src="i18n.js"></script>
+<script src="common.js"></script>
+<script>
+translateDom();
+document.querySelector('header').appendChild(langButton());
+document.getElementById('goReport').href = 'index.html?lang=' + LANG;
+document.getElementById('swNow').href = 'map.html?lang=' + LANG;
+const fmt = n => Math.round(n).toLocaleString(LANG === 'en' ? 'en-US' : 'ko-KR');
+const S = { year: 'all', month: 'all', measure: 'count', level: 'sgg', sel: null };
+let D, REG = {}, layer, map, legend, TOTAL;
+
+/* 선택한 기간에 해당하는 달 위치 */
+function monthIdx(){
+  return D.months.map((ym, i) => [ym, i]).filter(([ym]) =>
+    (S.year === 'all' || ym.startsWith(S.year)) && (S.month === 'all' || +ym.slice(5) === +S.month)).map(([, i]) => i);
+}
+const sumIdx = (arr, idx) => idx.reduce((a, i) => a + (arr ? arr[i] : 0), 0);
+function periodLabel(){
+  const y = S.year, m = S.month;
+  if (y === 'all' && m === 'all') return T('전체 기간 (2022.3~2026.8)');
+  if (y === 'all') return T('전 기간 {m}월 합계', { m });
+  if (m === 'all') return T('{y}년', { y });
+  return T('{y}년 {m}월', { y, m });
+}
+/* 단계 경계: 0이 아닌 값의 6분위, 보기 좋은 수로 반올림 */
+function niceBreaks(vals){
+  const v = vals.filter(x => x > 0).sort((a, b) => a - b);
+  if (!v.length) return [];
+  const out = [];
+  for (let k = 1; k < 6; k++) { const b = niceNum(v[Math.min(v.length - 1, Math.floor(v.length * k / 6))], 'round'); if (!out.length || b > out[out.length - 1]) out.push(b); }
+  return out;
+}
+/* 보기 좋은 수: 1, 1.2, 1.5, 2, 2.5, 3, 4, 5, 6, 8 × 10^k */
+function niceNum(x, mode){
+  if (x <= 0) return 0;
+  if (x < 1) return Math.round(x * 10) / 10 || .1;
+  const p = 10 ** Math.floor(Math.log10(x)), f = x / p, steps = [1, 1.2, 1.5, 2, 2.5, 3, 4, 5, 6, 8, 10];
+  const s = mode === 'ceil' ? steps.find(t => t >= f - 1e-9) : steps.reduce((b, t) => Math.abs(t - f) < Math.abs(b - f) ? t : b, 1);
+  return Math.round(s * p * 10) / 10;
+}
+const classOf = (x, br) => x <= 0 ? 0 : 1 + br.filter(b => x >= b).length;
+const colorOf = c => `var(--c${c})`;
+const rname = cd => REG[cd].sido === '세종' ? REG[cd].name : `${REG[cd].sido} ${REG[cd].name}`;
+const hexOf = c => getComputedStyle(document.documentElement).getPropertyValue(`--c${c}`).trim();
+
+function values(){
+  const idx = monthIdx(), out = {};
+  for (const cd in REG) {
+    const n = sumIdx(D.counts[cd], idx);
+    out[cd] = S.measure === 'area' ? n / REG[cd].km2 * 100 : n;
+  }
+  return out;
+}
+
+function drawMap(){
+  const val = values(), br = niceBreaks(Object.values(val));
+  layer.setStyle(f => {
+    const cd = f.properties.cd, on = cd === S.sel;
+    return { fillColor: hexOf(classOf(val[cd] || 0, br)), fillOpacity: .85, color: on ? '#1B2420' : '#8a918c', weight: on ? 3 : .6 };
+  });
+  layer.eachLayer(l => {
+    const cd = l.feature.properties.cd, r = REG[cd];
+    const v = val[cd] || 0;
+    l.setTooltipContent(`<b>${esc(rname(cd))}</b><br>${S.measure === 'area' ? T('100㎢당 {n}건', { n: v.toFixed(1) }) : T('{n}건', { n: fmt(v) })}`);
+    if (cd === S.sel) l.bringToFront();
+  });
+  const unit = S.measure === 'area' ? T('100㎢당 건수') : T('출동 건수');
+  const rows = [`<div class="lt">${esc(unit)}</div>`, `<div><i style="background:${hexOf(0)}"></i>0</div>`];
+  br.length && [0, ...br].forEach((b, k) => {
+    const hi = br[k];
+    const lo = k === 0 ? (S.measure === 'area' ? '0' : '1') : fmt(b);
+    rows.push(`<div><i style="background:${hexOf(k + 1)}"></i>${lo}${hi != null ? ' – ' + fmt(hi) : ' ' + T('이상')}</div>`);
+  });
+  legend.getContainer().innerHTML = rows.join('');
+}
+
+function drawPanel(){
+  const idx = monthIdx();
+  // 경고: 일부 연도
+  const p = document.getElementById('partial');
+  p.hidden = !(S.year === '2022' || S.year === '2026' || (S.year === 'all' && S.month !== 'all' && [1, 2, 9, 10, 11, 12].includes(+S.month)));
+  p.textContent = S.year === '2022' ? T('2022년은 3~12월 자료입니다 (벌집 제거 분류가 3월부터 적용).')
+                : S.year === '2026' ? T('2026년은 1~8월 자료입니다. 다른 해와 연간 합계를 직접 비교하지 마세요.')
+                : T('이 달은 2022년 또는 2026년 자료가 없어 합계에 포함된 해가 다릅니다.');
+  // 현황
+  const nat = Object.values(D.sido).reduce((a, arr) => a + sumIdx(arr, idx), 0);
+  const val = values();
+  const ranked = Object.entries(val).sort((a, b) => b[1] - a[1]);
+  const top = ranked[0];
+  const selN = S.sel ? sumIdx(D.counts[S.sel], idx) : null;
+  let peak = '';
+  if (idx.length > 1) {
+    const series = S.sel ? D.counts[S.sel] : D.months.map((_, i) => Object.values(D.sido).reduce((a, arr) => a + arr[i], 0));
+    const pi = idx.reduce((b, i) => series[i] > series[b] ? i : b, idx[0]);
+    const ym = D.months[pi]; peak = T('{y}년 {m}월', { y: ym.slice(0, 4), m: +ym.slice(5) });
+  }
+  document.getElementById('kpiTitle').textContent = periodLabel();
+  const k = [
+    [fmt(nat), T('전국 출동')],
+    S.sel ? [fmt(selN), T('{r} 출동', { r: REG[S.sel].name })] : [top && top[1] > 0 ? rname(top[0]) : '–', T('가장 많은 시군구')],
+  ];
+  if (peak) k.push([peak, S.sel ? T('이 지역 최다 월') : T('전국 최다 월'), 'wide']);
+  document.getElementById('kpis').innerHTML = k.map(([b, s, c]) => `<div class="kpi ${c || ''}"><b>${esc(b)}</b><span>${esc(s)}</span></div>`).join('');
+  drawChart(idx);
+  drawRank(idx, val);
+  drawPlaces();
+}
+
+function drawChart(idx){
+  const series = S.sel ? D.counts[S.sel] : D.months.map((_, i) => Object.values(D.sido).reduce((a, arr) => a + arr[i], 0));
+  document.getElementById('selName').textContent = S.sel ? rname(S.sel) : T('전국');
+  document.getElementById('selClear').hidden = !S.sel;
+  const W = 340, H = 150, L = 38, R = 6, TP = 10, B = 22, n = series.length, bw = (W - L - R) / n;
+  const max = Math.max(1, ...series), on = new Set(idx);
+  const nice = niceNum(max, 'ceil');
+  const y = v => TP + (H - TP - B) * (1 - v / nice);
+  let s = `<svg viewBox="0 0 ${W} ${H}" role="img" aria-label="${esc(T('월별 출동 건수 막대그래프'))}">`;
+  [0, nice / 2, nice].forEach(v => s += `<line x1="${L}" x2="${W - R}" y1="${y(v)}" y2="${y(v)}" stroke="var(--line)" stroke-width="1"/><text x="${L - 4}" y="${y(v) + 3}" font-size="9" text-anchor="end" fill="var(--muted)">${v >= 10000 && LANG !== 'en' ? (v / 10000) + '만' : v >= 1000 ? (v / 1000) + (LANG === 'en' ? 'k' : '천') : Math.round(v)}</text>`);
+  series.forEach((v, i) => {
+    const h = Math.max(v > 0 ? 1 : 0, (H - TP - B) * v / nice), x = L + i * bw;
+    s += `<rect x="${(x + .6).toFixed(1)}" y="${(H - B - h).toFixed(1)}" width="${Math.max(1, bw - 1.2).toFixed(1)}" height="${h.toFixed(1)}" rx="${Math.min(2, bw / 3).toFixed(1)}" fill="${on.has(i) ? 'var(--bar-on)' : 'var(--bar)'}"/>`;
+    s += `<rect class="hit" data-i="${i}" x="${x}" y="${TP}" width="${bw}" height="${H - TP - B + 4}" fill="transparent" style="cursor:pointer"/>`;
+    const ym = D.months[i];
+    if (ym.endsWith('-01') || i === 0) s += `<text x="${x + bw / 2}" y="${H - 8}" font-size="9" text-anchor="${i === 0 ? 'start' : 'middle'}" fill="var(--muted)">${ym.slice(0, 4)}</text>`;
+  });
+  s += '</svg>';
+  const box = document.getElementById('chart'), tip = document.getElementById('tip');
+  box.innerHTML = s; box.appendChild(tip);
+  box.querySelectorAll('.hit').forEach(r => {
+    const i = +r.dataset.i, ym = D.months[i];
+    r.addEventListener('mouseenter', () => {
+      const bb = r.getBoundingClientRect(), pb = box.getBoundingClientRect();
+      tip.textContent = `${T('{y}년 {m}월', { y: ym.slice(0, 4), m: +ym.slice(5) })} · ${T('{n}건', { n: fmt(series[i]) })}`;
+      tip.style.left = (bb.left - pb.left + bb.width / 2) + 'px'; tip.style.top = (y(series[i]) / H * pb.height) + 'px'; tip.style.display = 'block';
+    });
+    r.addEventListener('mouseleave', () => tip.style.display = 'none');
+    r.addEventListener('click', () => { S.year = ym.slice(0, 4); S.month = String(+ym.slice(5)); syncButtons(); render(); });
+  });
+}
+
+function drawRank(idx, val){
+  const tb = document.getElementById('rank');
+  document.getElementById('rankUnit').textContent = S.measure === 'area' && S.level === 'sgg' ? T('100㎢당') : T('건수');
+  let rows;
+  if (S.level === 'sido') {
+    const tot = Object.values(D.sido).reduce((a, arr) => a + sumIdx(arr, idx), 0) || 1;
+    rows = Object.entries(D.sido).map(([s, arr]) => [s, s, sumIdx(arr, idx), tot]).sort((a, b) => b[2] - a[2]);
+  } else {
+    const tot = Object.keys(REG).reduce((a, cd) => a + sumIdx(D.counts[cd], idx), 0) || 1;
+    rows = Object.entries(val).sort((a, b) => b[1] - a[1]).slice(0, 15).map(([cd, v]) => [cd, rname(cd), v, tot, sumIdx(D.counts[cd], idx)]);
+  }
+  tb.innerHTML = rows.map((r, i) => {
+    const share = (S.level === 'sido' ? r[2] : r[4]) / r[3] * 100;
+    const v = S.measure === 'area' && S.level === 'sgg' ? r[2].toFixed(1) : fmt(r[2]);
+    return `<tr data-k="${esc(r[0])}" class="${r[0] === S.sel ? 'on' : ''}"><td>${i + 1}</td><td>${esc(r[1])}</td><td>${v}</td><td>${share.toFixed(1)}%</td></tr>`;
+  }).join('');
+  tb.querySelectorAll('tr').forEach(tr => tr.onclick = () => {
+    const k = tr.dataset.k;
+    if (S.level === 'sgg') select(k, true);
+    else { const b = L.latLngBounds([]); layer.eachLayer(l => { if (REG[l.feature.properties.cd].sido === k) b.extend(l.getBounds()); }); if (b.isValid()) map.fitBounds(b, { padding: [20, 20] }); }
+  });
+}
+
+function drawPlaces(){
+  let arr, title;
+  if (S.sel) { arr = D.place_sgg[S.sel] || []; title = T('출동 장소 · {r} (전 기간)', { r: REG[S.sel].name }); }
+  else if (S.year === 'all') { arr = D.places.map(p => D.place_year[p].reduce((a, b) => a + b, 0)); title = T('출동 장소 · 전국 (전 기간)'); }
+  else { const yi = D.years.indexOf(+S.year); arr = D.places.map(p => D.place_year[p][yi]); title = T('출동 장소 · 전국 ({y}년)', { y: S.year }); }
+  document.getElementById('placeTitle').textContent = title;
+  const tot = arr.reduce((a, b) => a + b, 0) || 1, mx = Math.max(1, ...arr);
+  const order = D.places.map((p, i) => [p, arr[i] || 0]).sort((a, b) => (a[0] === '기타') - (b[0] === '기타') || b[1] - a[1]);
+  document.getElementById('places').innerHTML = order.map(([p, v]) =>
+    `<div class="r"><span>${esc(T(p))}</span><div class="t" style="width:${(v / mx * 100).toFixed(1)}%"></div><span class="v">${(v / tot * 100).toFixed(1)}%</span></div>`).join('');
+}
+
+function select(cd, zoom){
+  S.sel = S.sel === cd && !zoom ? null : cd;
+  if (S.sel && zoom) layer.eachLayer(l => { if (l.feature.properties.cd === cd) map.fitBounds(l.getBounds(), { maxZoom: 9, padding: [30, 30] }); });
+  render();
+}
+function render(){ drawMap(); drawPanel(); }
+function syncButtons(){
+  document.querySelectorAll('#years button').forEach(b => b.setAttribute('aria-pressed', String(b.dataset.v === S.year)));
+  document.querySelectorAll('#months button').forEach(b => b.setAttribute('aria-pressed', String(b.dataset.v === S.month)));
+}
+
+(async () => {
+  try {
+    await need('leaflet');
+    const [d, g] = await Promise.all([fetch('data/fire/fire_nest.json').then(r => r.json()), fetch('data/fire/sgg.geojson').then(r => r.json())]);
+    D = d; D.regions.forEach(r => REG[r.cd] = r);
+    TOTAL = D.total;
+    document.getElementById('sub').textContent = T('소방청 벌집 제거 출동 {n}건 · 2022.3~2026.8', { n: fmt(D.total) });
+    // 단추
+    document.getElementById('years').innerHTML = ['all', ...D.years.map(String)].map(v => `<button type="button" data-v="${v}">${v === 'all' ? T('전체') : v}</button>`).join('');
+    document.getElementById('months').innerHTML = ['all', ...Array.from({ length: 12 }, (_, i) => String(i + 1))].map(v => `<button type="button" data-v="${v}">${v === 'all' ? T('전체') : T('{m}월', { m: v })}</button>`).join('');
+    document.querySelectorAll('#years button').forEach(b => b.onclick = () => { S.year = b.dataset.v; syncButtons(); render(); });
+    document.querySelectorAll('#months button').forEach(b => b.onclick = () => { S.month = b.dataset.v; syncButtons(); render(); });
+    document.querySelectorAll('#measure button').forEach(b => b.onclick = () => { S.measure = b.dataset.v; document.querySelectorAll('#measure button').forEach(x => x.setAttribute('aria-pressed', String(x === b))); render(); });
+    document.querySelectorAll('#rankLevel button').forEach(b => b.onclick = () => { S.level = b.dataset.v; document.querySelectorAll('#rankLevel button').forEach(x => x.setAttribute('aria-pressed', String(x === b))); drawPanel(); });
+    document.getElementById('selClear').onclick = () => { S.sel = null; map.fitBounds(layer.getBounds(), { padding: [10, 10] }); render(); };
+    // 주소로 연도·월 지정 (?y=2024&m=8)
+    const q = new URLSearchParams(location.search);
+    if (q.get('y') && D.years.includes(+q.get('y'))) S.year = q.get('y');
+    if (q.get('m') && +q.get('m') >= 1 && +q.get('m') <= 12) S.month = String(+q.get('m'));
+    syncButtons();
+    // 지도
+    map = L.map('map', { zoomSnap: .5 }).setView([36.2, 127.8], 7);
+    baseTiles({ className: 'gray-tiles', maxZoom: 13 }).addTo(map);
+    layer = L.geoJSON(g, { style: { weight: .6 }, onEachFeature: (f, l) => {
+      l.bindTooltip('', { sticky: true });
+      l.on({ mouseover: e => e.target.setStyle({ weight: 2, color: '#1B2420' }), mouseout: () => drawMap(), click: () => select(f.properties.cd, false) });
+    } }).addTo(map);
+    map.fitBounds(layer.getBounds(), { padding: [10, 10] });
+    legend = L.control({ position: 'bottomright' }); legend.onAdd = () => L.DomUtil.create('div', 'legend'); legend.addTo(map);
+    document.getElementById('srcNote').innerHTML = esc(T('자료: 소방청 구조·생활안전활동 기록지(정보공개청구, 2022.3~2026.8), 공식 사고원인 "벌(집)제거" 출동 건수. 말벌 외 벌집 제거도 포함될 수 있습니다.'))
+      + '<br>' + esc(T('시군구 경계는 2023년 기준이며, 이후 새로 생긴 구(화성시·부천시 일반구, 인천 검단·영종·제물포·서해구)는 이전 시군구에 합쳤습니다. 시군구가 비어 있는 {n}건은 시도 합계에만 들어갑니다.', { n: fmt(D.unmapped) }))
+      + '<br>' + esc(T('개인 식별을 막기 위해 시군구·월 단위 건수만 공개합니다.'));
+    render();
+  } catch (err) {
+    document.getElementById('sub').textContent = T('자료를 불러오지 못했습니다: ') + err.message;
+  }
+})();
+</script>
+</body>
+</html>
