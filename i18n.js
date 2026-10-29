@@ -176,6 +176,12 @@ const EN = {
     'Boundaries are as of 2023; districts created later (Hwaseong and Bucheon wards, Incheon Geomdan/Yeongjong/Jemulpo/Seohae) are merged into their former areas. {n} records without a city/county count toward province totals only.',
   '개인 식별을 막기 위해 시군구·월 단위 건수만 공개합니다.': 'To protect privacy, only monthly counts by city/county are shown.',
   '소방청': 'Fire agency',
+  '읍면동': 'Town/dong', '3건 미만': 'fewer than 3', '{r} 읍면동': '{r} by town/dong', '읍면동 불러오는 중…': 'Loading towns…', '읍면동 미상': 'Town unknown',
+  '시군구를 누르거나 확대하면 읍면동별로 보입니다': 'Tap a city/county or zoom in to see towns',
+  '읍면동은 법정동 기준(2023년 경계)입니다. 읍면동이 비어 있거나 경계에 없는 이름(이후 나뉘거나 새로 생긴 동 등)은 해당 시군구의 "읍면동 미상"으로 셉니다.':
+    'Towns use legal-dong boundaries as of 2023. Records with a blank or unmatched town (split or newly created later) count as "Town unknown" in their city/county.',
+  '개인 식별을 막기 위해 월·시군구·읍면동 단위 건수만 공개하며, 1~2건은 "3건 미만"으로 표시합니다.':
+    'To protect privacy, only monthly counts by city/county and town are shown, and 1–2 callouts appear as "fewer than 3".',
   '단독주택': 'Detached house', '공동주택': 'Apartment / multi-unit', '근린생활시설': 'Shops & services', '공장ㆍ창고': 'Factory / warehouse', '도로': 'Road',
   '교육·연구시설': 'School / research', '논·밭': 'Farmland', '산': 'Mountain / forest', '업무시설': 'Office', '숙박시설': 'Lodging', '문화 및 집회시설': 'Culture & parks',
   '담당자 확인 자료 {n}건 · {t} 기준': '{n} checked reports · as of {t}', '자료를 불러오지 못했습니다: ': 'Could not load data: ',

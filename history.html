@@ -60,6 +60,8 @@ tbody tr.on{background:color-mix(in srgb,var(--amber) 22%,transparent)}
 .legend{background:var(--surface);color:var(--ink);padding:8px 10px;border-radius:8px;box-shadow:0 1px 4px rgba(0,0,0,.25);font-size:.76rem;line-height:1.5;font-variant-numeric:tabular-nums}
 .legend .lt{font-weight:700;margin-bottom:4px;font-size:.8rem}
 .legend i{display:inline-block;width:16px;height:11px;margin-right:6px;vertical-align:-1px;border:1px solid rgba(0,0,0,.18)}
+.seg button[hidden]{display:none}
+.hint{position:absolute;z-index:500;left:50%;top:10px;transform:translateX(-50%);background:var(--surface);color:var(--ink);border-radius:20px;padding:6px 12px;font-size:.8rem;box-shadow:0 1px 4px rgba(0,0,0,.25);pointer-events:none;white-space:nowrap}
 .gray-tiles{filter:grayscale(1) contrast(1.02) brightness(1.06)}
 .leaflet-tooltip{font:inherit;font-size:.82rem}
 </style>
@@ -75,7 +77,7 @@ tbody tr.on{background:color-mix(in srgb,var(--amber) 22%,transparent)}
   <a class="btn red" href="index.html" id="goReport">신고하기</a>
 </header>
 <div class="wrap">
-  <div id="map"></div>
+  <div id="map" style="position:relative"><div class="hint" id="hint">시군구를 누르거나 확대하면 읍면동별로 보입니다</div></div>
   <aside>
     <h2>연도</h2>
     <div class="seg" id="years"></div>
@@ -99,6 +101,7 @@ tbody tr.on{background:color-mix(in srgb,var(--amber) 22%,transparent)}
 
     <h2 id="rankTitle">출동이 많은 지역</h2>
     <div class="seg" id="rankLevel" style="margin-bottom:6px">
+      <button type="button" data-v="emd" aria-pressed="false" hidden>읍면동</button>
       <button type="button" data-v="sgg" aria-pressed="true">시군구</button>
       <button type="button" data-v="sido" aria-pressed="false">시도</button>
     </div>
@@ -118,8 +121,11 @@ document.querySelector('header').appendChild(langButton());
 document.getElementById('goReport').href = 'index.html?lang=' + LANG;
 document.getElementById('swNow').href = 'map.html?lang=' + LANG;
 const fmt = n => Math.round(n).toLocaleString(LANG === 'en' ? 'en-US' : 'ko-KR');
-const S = { year: 'all', month: 'all', measure: 'count', level: 'sgg', sel: null };
-let D, REG = {}, layer, map, legend, TOTAL;
+const S = { year: 'all', month: 'all', measure: 'count', level: 'sgg', sel: null, auto: false, emd: null };
+let D, REG = {}, layer, map, legend, TOTAL, emdLayer = null, EMD = null;
+const EMDCACHE = {};
+const SMALL = 3;                 // 한 달 1~2건 등 작은 수는 숫자 대신 "3건 미만"
+const smallTxt = n => n > 0 && n < SMALL ? T('3건 미만') : null;
 
 /* 선택한 기간에 해당하는 달 위치 */
 function monthIdx(){
@@ -168,22 +174,83 @@ function drawMap(){
   const val = values(), br = niceBreaks(Object.values(val));
   layer.setStyle(f => {
     const cd = f.properties.cd, on = cd === S.sel;
-    return { fillColor: hexOf(classOf(val[cd] || 0, br)), fillOpacity: .85, color: on ? '#1B2420' : '#8a918c', weight: on ? 3 : .6 };
+    return { fillColor: hexOf(classOf(val[cd] || 0, br)), fillOpacity: on && emdLayer ? 0 : (S.sel && emdLayer ? .15 : .85), color: on ? '#1B2420' : '#8a918c', weight: on ? 3 : .6 };
   });
   layer.eachLayer(l => {
     const cd = l.feature.properties.cd, r = REG[cd];
     const v = val[cd] || 0;
     l.setTooltipContent(`<b>${esc(rname(cd))}</b><br>${S.measure === 'area' ? T('100㎢당 {n}건', { n: v.toFixed(1) }) : T('{n}건', { n: fmt(v) })}`);
-    if (cd === S.sel) l.bringToFront();
+    if (cd === S.sel && !emdLayer) l.bringToFront();
   });
-  const unit = S.measure === 'area' ? T('100㎢당 건수') : T('출동 건수');
+  if (emdLayer) emdLayer.bringToFront();
+  let unit = S.measure === 'area' ? T('100㎢당 건수') : T('출동 건수');
+  let LB = br;
+  if (emdLayer) { LB = drawEmd(); unit += ' · ' + T('{r} 읍면동', { r: REG[S.sel].name }); }
+  else if (emdLayer === null && S.sel) unit += ' · ' + T('읍면동 불러오는 중…');
   const rows = [`<div class="lt">${esc(unit)}</div>`, `<div><i style="background:${hexOf(0)}"></i>0</div>`];
-  br.length && [0, ...br].forEach((b, k) => {
+  const br2 = LB;
+  br2.length && [0, ...br2].forEach((b, k) => {
+    const br = br2;
     const hi = br[k];
     const lo = k === 0 ? (S.measure === 'area' ? '0' : '1') : fmt(b);
     rows.push(`<div><i style="background:${hexOf(k + 1)}"></i>${lo}${hi != null ? ' – ' + fmt(hi) : ' ' + T('이상')}</div>`);
   });
   legend.getContainer().innerHTML = rows.join('');
+  document.getElementById('hint').hidden = !!S.sel;
+}
+
+/* ── 읍면동 ─────────────────────────────────────────────── */
+async function loadEmd(pre){
+  if (!EMDCACHE[pre]) EMDCACHE[pre] = fetch(`data/fire/emd_${pre}.json`).then(r => r.json());
+  return EMDCACHE[pre];
+}
+function emdValues(){
+  const idx = monthIdx(), out = {};
+  for (const f of EMD.feats) {
+    const n = sumIdx(EMD.data.counts[f.properties.cd], idx);
+    out[f.properties.cd] = { n, v: S.measure === 'area' ? n / Math.max(f.properties.km2, .05) * 100 : n };
+  }
+  return out;
+}
+function drawEmd(){
+  const val = emdValues(), br = niceBreaks(Object.values(val).map(x => x.v));
+  emdLayer.setStyle(f => {
+    const cd = f.properties.cd, on = cd === S.emd;
+    return { fillColor: hexOf(classOf(val[cd].v, br)), fillOpacity: .9, color: on ? '#1B2420' : '#ffffff', weight: on ? 3 : .8 };
+  });
+  emdLayer.eachLayer(l => {
+    const p = l.feature.properties, x = val[p.cd];
+    const t = smallTxt(x.n) || (S.measure === 'area' ? T('100㎢당 {n}건', { n: x.v.toFixed(1) }) : T('{n}건', { n: fmt(x.n) }));
+    l.setTooltipContent(`<b>${esc(p.n)}</b><br>${esc(t)}`);
+    if (p.cd === S.emd) l.bringToFront();
+  });
+  return br;
+}
+async function showEmd(cd){
+  if (emdLayer) { map.removeLayer(emdLayer); emdLayer = null; }
+  EMD = null; S.emd = null;
+  if (!cd) return;
+  const data = await loadEmd(cd.slice(0, 2));
+  if (S.sel !== cd) return;                       // 기다리는 사이 다른 곳을 고른 경우
+  const feats = data.geo.features.filter(f => f.properties.cd.startsWith(cd));
+  EMD = { data, feats };
+  emdLayer = L.geoJSON({ type: 'FeatureCollection', features: feats }, { onEachFeature: (f, l) => {
+    l.bindTooltip('', { sticky: true });
+    l.on({ mouseover: e => e.target.setStyle({ weight: 2.5, color: '#1B2420' }), mouseout: () => drawEmd(),
+           click: () => { S.emd = S.emd === f.properties.cd ? null : f.properties.cd; drawEmd(); drawPanel(); } });
+  } }).addTo(map);
+  render();
+}
+/* 지도 가운데가 어느 시군구 안에 있는지 (확대했을 때 자동으로 읍면동 보기) */
+function inRing(pt, ring){ let c = false; for (let i = 0, j = ring.length - 1; i < ring.length; j = i++) { const [xi, yi] = ring[i], [xj, yj] = ring[j]; if ((yi > pt[1]) !== (yj > pt[1]) && pt[0] < (xj - xi) * (pt[1] - yi) / (yj - yi) + xi) c = !c; } return c; }
+function sggAt(latlng){
+  const pt = [latlng.lng, latlng.lat]; let hit = null;
+  layer.eachLayer(l => {
+    if (hit || !l.getBounds().contains(latlng)) return;
+    const g = l.feature.geometry, polys = g.type === 'Polygon' ? [g.coordinates] : g.coordinates;
+    if (polys.some(p => inRing(pt, p[0]) && !p.slice(1).some(h => inRing(pt, h)))) hit = l.feature.properties.cd;
+  });
+  return hit;
 }
 
 function drawPanel(){
@@ -252,8 +319,31 @@ function drawChart(idx){
 
 function drawRank(idx, val){
   const tb = document.getElementById('rank');
-  document.getElementById('rankUnit').textContent = S.measure === 'area' && S.level === 'sgg' ? T('100㎢당') : T('건수');
+  document.getElementById('rankUnit').textContent = S.measure === 'area' && S.level !== 'sido' ? T('100㎢당') : T('건수');
+  const eb = document.querySelector('#rankLevel [data-v="emd"]'); eb.hidden = !S.sel;
+  if (S.level === 'emd' && !S.sel) S.level = 'sgg';
+  document.querySelectorAll('#rankLevel button').forEach(x => x.setAttribute('aria-pressed', String(x.dataset.v === S.level)));
   let rows;
+  if (S.level === 'emd') {
+    if (!EMD) { tb.innerHTML = `<tr><td></td><td colspan="3">${esc(T('읍면동 불러오는 중…'))}</td></tr>`; return; }
+    const ev = emdValues(), tot = Object.values(ev).reduce((a, x) => a + x.n, 0) + sumIdx(EMD.data.unknown[S.sel], idx) || 1;
+    const names = Object.fromEntries(EMD.feats.map(f => [f.properties.cd, f.properties.n]));
+    const list = Object.entries(ev).sort((a, b) => b[1].v - a[1].v).slice(0, 20);
+    let html = list.map(([cd, x], i) => {
+      const s = smallTxt(x.n);
+      const v = s ? '&lt;3' : S.measure === 'area' ? x.v.toFixed(1) : fmt(x.n);
+      return `<tr data-k="${cd}" class="${cd === S.emd ? 'on' : ''}"><td>${i + 1}</td><td>${esc(names[cd])}</td><td>${v}</td><td>${s ? '–' : (x.n / tot * 100).toFixed(1) + '%'}</td></tr>`;
+    }).join('');
+    const unk = sumIdx(EMD.data.unknown[S.sel], idx);
+    if (unk) html += `<tr style="cursor:default"><td></td><td style="color:var(--muted)">${esc(T('읍면동 미상'))}</td><td>${smallTxt(unk) ? '&lt;3' : fmt(unk)}</td><td></td></tr>`;
+    tb.innerHTML = html;
+    tb.querySelectorAll('tr[data-k]').forEach(tr => tr.onclick = () => {
+      S.emd = tr.dataset.k;
+      emdLayer.eachLayer(l => { if (l.feature.properties.cd === S.emd) { map.fitBounds(l.getBounds(), { maxZoom: 12, padding: [40, 40] }); l.openTooltip(); } });
+      drawEmd(); drawRank(monthIdx(), values());
+    });
+    return;
+  }
   if (S.level === 'sido') {
     const tot = Object.values(D.sido).reduce((a, arr) => a + sumIdx(arr, idx), 0) || 1;
     rows = Object.entries(D.sido).map(([s, arr]) => [s, s, sumIdx(arr, idx), tot]).sort((a, b) => b[2] - a[2]);
@@ -285,9 +375,13 @@ function drawPlaces(){
     `<div class="r"><span>${esc(T(p))}</span><div class="t" style="width:${(v / mx * 100).toFixed(1)}%"></div><span class="v">${(v / tot * 100).toFixed(1)}%</span></div>`).join('');
 }
 
-function select(cd, zoom){
-  S.sel = S.sel === cd && !zoom ? null : cd;
-  if (S.sel && zoom) layer.eachLayer(l => { if (l.feature.properties.cd === cd) map.fitBounds(l.getBounds(), { maxZoom: 9, padding: [30, 30] }); });
+function select(cd, zoom, auto){
+  const prev = S.sel;
+  S.sel = S.sel === cd && !zoom && !auto ? null : cd;
+  S.auto = !!(S.sel && auto);
+  if (S.sel && zoom) layer.eachLayer(l => { if (l.feature.properties.cd === cd) map.fitBounds(l.getBounds(), { maxZoom: 10, padding: [30, 30] }); });
+  S.level = S.sel ? 'emd' : (S.level === 'emd' ? 'sgg' : S.level);
+  if (S.sel !== prev) { showEmd(S.sel); }
   render();
 }
 function render(){ drawMap(); drawPanel(); }
@@ -310,7 +404,7 @@ function syncButtons(){
     document.querySelectorAll('#months button').forEach(b => b.onclick = () => { S.month = b.dataset.v; syncButtons(); render(); });
     document.querySelectorAll('#measure button').forEach(b => b.onclick = () => { S.measure = b.dataset.v; document.querySelectorAll('#measure button').forEach(x => x.setAttribute('aria-pressed', String(x === b))); render(); });
     document.querySelectorAll('#rankLevel button').forEach(b => b.onclick = () => { S.level = b.dataset.v; document.querySelectorAll('#rankLevel button').forEach(x => x.setAttribute('aria-pressed', String(x === b))); drawPanel(); });
-    document.getElementById('selClear').onclick = () => { S.sel = null; map.fitBounds(layer.getBounds(), { padding: [10, 10] }); render(); };
+    document.getElementById('selClear').onclick = () => { select(null); map.fitBounds(layer.getBounds(), { padding: [10, 10] }); };
     // 주소로 연도·월 지정 (?y=2024&m=8)
     const q = new URLSearchParams(location.search);
     if (q.get('y') && D.years.includes(+q.get('y'))) S.year = q.get('y');
@@ -321,13 +415,20 @@ function syncButtons(){
     baseTiles({ className: 'gray-tiles', maxZoom: 13 }).addTo(map);
     layer = L.geoJSON(g, { style: { weight: .6 }, onEachFeature: (f, l) => {
       l.bindTooltip('', { sticky: true });
-      l.on({ mouseover: e => e.target.setStyle({ weight: 2, color: '#1B2420' }), mouseout: () => drawMap(), click: () => select(f.properties.cd, false) });
+      l.on({ mouseover: e => e.target.setStyle({ weight: 2, color: '#1B2420' }), mouseout: () => drawMap(), click: () => select(f.properties.cd, true) });
     } }).addTo(map);
     map.fitBounds(layer.getBounds(), { padding: [10, 10] });
+    // 확대하면 지도 가운데 시군구의 읍면동을 자동으로, 다시 넓히면 전국으로
+    map.on('moveend', () => {
+      const z = map.getZoom();
+      if (z >= 10 && (!S.sel || S.auto)) { const cd = sggAt(map.getCenter()); if (cd && cd !== S.sel) select(cd, false, true); }
+      else if (z < 9 && S.sel && S.auto) select(null);
+    });
     legend = L.control({ position: 'bottomright' }); legend.onAdd = () => L.DomUtil.create('div', 'legend'); legend.addTo(map);
     document.getElementById('srcNote').innerHTML = esc(T('자료: 소방청 구조·생활안전활동 기록지(정보공개청구, 2022.3~2026.8), 공식 사고원인 "벌(집)제거" 출동 건수. 말벌 외 벌집 제거도 포함될 수 있습니다.'))
       + '<br>' + esc(T('시군구 경계는 2023년 기준이며, 이후 새로 생긴 구(화성시·부천시 일반구, 인천 검단·영종·제물포·서해구)는 이전 시군구에 합쳤습니다. 시군구가 비어 있는 {n}건은 시도 합계에만 들어갑니다.', { n: fmt(D.unmapped) }))
-      + '<br>' + esc(T('개인 식별을 막기 위해 시군구·월 단위 건수만 공개합니다.'));
+      + '<br>' + esc(T('읍면동은 법정동 기준(2023년 경계)입니다. 읍면동이 비어 있거나 경계에 없는 이름(이후 나뉘거나 새로 생긴 동 등)은 해당 시군구의 "읍면동 미상"으로 셉니다.'))
+      + '<br>' + esc(T('개인 식별을 막기 위해 월·시군구·읍면동 단위 건수만 공개하며, 1~2건은 "3건 미만"으로 표시합니다.'));
     render();
   } catch (err) {
     document.getElementById('sub').textContent = T('자료를 불러오지 못했습니다: ') + err.message;
