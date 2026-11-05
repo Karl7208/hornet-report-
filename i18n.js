@@ -187,12 +187,17 @@ const EN = {
   '담당자 확인 자료 {n}건 · {t} 기준': '{n} checked reports · as of {t}', '자료를 불러오지 못했습니다: ': 'Could not load data: ',
 };
 
-/* 종 이름: '말벌'이 신고 종류와 종(Vespa crabro) 두 뜻이라 따로 둠 */
+/* 종 이름: '말벌'이 신고 종류와 종(Vespa crabro) 두 뜻이라 따로 둠
+   한국명–학명 (말벌 논문 2 기준): 좀말벌 = V. analis, 꼬마장수말벌 = V. ducalis, 털보말벌 = V. simillima
+   DB에는 한국명만 저장. 화면에는 한국어 "한국명 (학명)", 영어 "영명 (학명)" */
+const SPECIES_SCI = {
+  '등검은말벌': 'V. velutina', '장수말벌': 'V. mandarinia', '말벌': 'V. crabro', '좀말벌': 'V. analis',
+  '꼬마장수말벌': 'V. ducalis', '털보말벌': 'V. simillima', '검정말벌': 'V. dybowskii' };
 const SPECIES_EN = {
   '등검은말벌': 'Yellow-legged hornet (Vespa velutina)', '장수말벌': 'Northern giant hornet (Vespa mandarinia)',
   '말벌': 'European hornet (Vespa crabro)', '꼬마장수말벌': 'Vespa ducalis', '좀말벌': 'Vespa analis',
-  '털보말벌': 'Vespa simillima', '검정말벌': 'Vespa dybowskii', '판별불가': 'species unknown' };
-const TS = v => (LANG === 'en' && v && SPECIES_EN[v]) ? SPECIES_EN[v] : v;
+  '털보말벌': 'Vespa simillima', '검정말벌': 'Vespa dybowskii', '판별불가': 'species unknown', '말벌 아님': 'not a hornet' };
+const TS = v => !v ? v : LANG === 'en' ? (SPECIES_EN[v] || v) : SPECIES_SCI[v] ? `${v} (${SPECIES_SCI[v]})` : v;
 
 function T(ko, vars){
   let s = (LANG === 'en' && EN[ko] != null) ? EN[ko] : ko;

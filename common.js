@@ -214,7 +214,11 @@ const SupaStore = {
       const up = await this.c.storage.from(bucket).upload(key, blob, { contentType: blob.type || 'application/octet-stream', upsert:false });
       if (up.error && !(String(up.error.statusCode) === '409' || /exist|duplicate/i.test(up.error.message))) throw new Error(up.error.message);
     }
-    this.chk(await this.c.from('reports').insert(report));
+    let ins = await this.c.from('reports').insert(report);
+    if (ins.error && 'ui_lang' in report && /ui_lang/.test(ins.error.message || '')) {   // v7 SQL 실행 전: 언어 칸 없이 다시
+      const { ui_lang, ...rest } = report; ins = await this.c.from('reports').insert(rest);
+    }
+    this.chk(ins);
     if (media.length) this.chk(await this.c.from('media').insert(media));
   },
   async listReports(){ const r = await this.c.from('reports').select('*').order('created_at', { ascending:false }).limit(1000); this.chk(r); return r.data; },
@@ -373,7 +377,7 @@ LocalStore.session = async function(){ return { user: { email: '이 기기(시�
 
 async function initStore(lineEl){
   if (lineEl) lineEl.textContent = '저장소 연결 중…';
-  try { await withTimeout(STORE.init(), 15000); if (lineEl) lineEl.innerHTML = `저장소: <b>${esc(STORE.name)}</b>`; }
+  try { await withTimeout(STORE.init(), 15000); const tr = x => typeof T === 'function' ? T(x) : x; if (lineEl) lineEl.innerHTML = `${esc(tr('저장소:'))} <b>${esc(tr(STORE.name))}</b>`; }
   catch (err) {
     if (lineEl) lineEl.innerHTML = `<span style="color:var(--rust)">저장소 연결 실패: ${esc(err.message)}</span> 이 기기 저장으로 전환합니다.`;
     STORE = LocalStore; await STORE.init();

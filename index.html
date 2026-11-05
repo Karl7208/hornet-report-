@@ -579,7 +579,7 @@ $('#submitBtn').onclick = async () => {
       nest_site: (sting || draft.type === '벌집') ? draft.nest : null,
       sting_count: sting ? draft.n : null, sting_severity: sting ? draft.sev : null, activity: sting ? draft.act : null,
       memo: $('#memo').value.trim() || null, n_photos: media.length,
-      status: '접수', species: null, species_basis: null, reviewer: null, reviewed_at: null, app_version: CFG.appVersion
+      status: '접수', species: null, species_basis: null, reviewer: null, reviewed_at: null, app_version: CFG.appVersion, ui_lang: LANG
     };
     await STORE.saveReport(report, media, blobs);
     $('#doneNo').textContent = report_id;

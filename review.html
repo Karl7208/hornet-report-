@@ -59,8 +59,9 @@ select{font:inherit;padding:8px;border:1px solid var(--line);border-radius:7px;b
 <header>
   <h1><span class="stripe"></span>말벌 신고 검수</h1>
   <span class="mode" id="modeLine"></span>
-  <a class="btn" href="https://karl7208.github.io/hornet-index/" target="_blank" rel="noopener" style="padding:6px 10px">전국 말벌 활동 지수</a>
-  <a class="btn" href="map.html" target="_blank" rel="noopener" style="padding:6px 10px">발생 지도</a>
+  <a class="btn" id="lnIndex" href="https://karl7208.github.io/hornet-index/" target="_blank" rel="noopener" style="padding:6px 10px">전국 말벌 활동 지수</a>
+  <a class="btn" id="lnMap" href="map.html" target="_blank" rel="noopener" style="padding:6px 10px">발생 지도</a>
+  <span id="langSlot"></span>
   <label class="who">검수자 <input id="reviewer" placeholder="이름"> <span id="acct" class="mode"></span> <button class="btn" id="logout" style="display:none;padding:5px 10px">로그아웃</button></label>
 </header>
 <nav role="tablist">
@@ -80,7 +81,7 @@ select{font:inherit;padding:8px;border:1px solid var(--line);border-radius:7px;b
 <!-- ① 검수 대기 -->
 <section class="tab on" id="t-queue">
   <div class="stats" id="qStats"></div>
-  <div class="help">
+  <div class="help" id="hQueue">
     <b>2일마다 이렇게 처리합니다</b>
     <ol>
       <li>아래 사진 카드로 신고를 훑어봅니다. <b>빨간 테두리</b>는 먼저 볼 신고(쏘임, 사람·꿀벌 가까이)입니다.</li>
@@ -92,7 +93,7 @@ select{font:inherit;padding:8px;border:1px solid var(--line);border-radius:7px;b
       <dl class="vals">
         <dt>판정</dt><dd>승인 / 반려 (비워 두면 다음 검수로 넘어감)</dd>
         <dt>반려사유</dt><dd>말벌 아님 / 대상 없음 / 사진 불량 / 중복 / 위치 오류 / 부적절</dd>
-        <dt>종</dt><dd>등검은말벌 / 장수말벌 / 꼬마장수말벌 / 좀말벌 / 털보말벌 / 검정말벌 / 말벌 / 판별불가</dd>
+        <dt>종</dt><dd>등검은말벌(V. velutina) / 장수말벌(V. mandarinia) / 꼬마장수말벌(V. ducalis) / 좀말벌(V. analis) / 털보말벌(V. simillima) / 검정말벌(V. dybowskii) / 말벌(V. crabro) / 판별불가 — CSV에는 한국명만 적음</dd>
         <dt>판별근거</dt><dd>개체확인 / 둥지형태추정 / 사진없음</dd>
         <dt>유형</dt><dd>시민이 잘못 골랐으면 고쳐서 올림: 벌집 / 말벌 / 쏘임</dd>
       </dl>
@@ -113,7 +114,7 @@ select{font:inherit;padding:8px;border:1px solid var(--line);border-radius:7px;b
 <!-- ② 활동 중인 둥지 -->
 <section class="tab" id="t-nest">
   <div class="stats" id="nStats"></div>
-  <div class="help">
+  <div class="help" id="hNest">
     <b>확인된 벌집 중 아직 활동 중인 것</b>
     <ol>
       <li><b>둥지 목록 CSV 내려받기</b> → 소방서·지자체에 보낼 때도 이 파일을 씁니다.</li>
@@ -140,7 +141,7 @@ select{font:inherit;padding:8px;border:1px solid var(--line);border-radius:7px;b
 
 <!-- ③ 기록·내보내기 -->
 <section class="tab" id="t-export">
-  <div class="help">
+  <div class="help" id="hExport">
     <b>AI 학습용 목록</b>
     <ol>
       <li>검수가 끝난(승인·반려) 모든 사진과 판정 결과입니다.</li>
@@ -161,11 +162,56 @@ select{font:inherit;padding:8px;border:1px solid var(--line);border-radius:7px;b
     </ol>
   </div>
   <div class="bar"><button class="btn" id="xRet">원본 정리 실행</button><span class="muted" id="xRetOut"></span></div>
+  <div class="help" style="margin-top:18px" id="hPilot"><b>시범 운영 지표 (pilot_metrics.csv)</b>
+    <ol>
+      <li>기간을 고르고 내려받습니다. 개인정보 없이 <b>집계만</b> 들어갑니다 (신고번호·주소·좌표·연락처 없음).</li>
+      <li>신고 수(유형·종·시도), 승인율, 반려 사유, 검수 소요 시간, 둥지 처리율·기간·처리 주체, 사진 첨부·영문 화면 비율, 지수 매일 실행 기록, 운영비.</li>
+      <li>기간 기준: 신고 접수일. 지수 실행 기록은 hornet-index 저장소의 <code>data/archive/runlog.csv</code>에서 읽습니다.</li>
+    </ol>
+  </div>
+  <div class="bar">
+    <label>시작 <input type="date" id="pmFrom" style="font:inherit;padding:7px;border:1px solid var(--line);border-radius:7px"></label>
+    <label>끝 <input type="date" id="pmTo" style="font:inherit;padding:7px;border:1px solid var(--line);border-radius:7px"></label>
+    <button class="btn primary" id="xPilot">시범 운영 지표 CSV</button>
+    <span class="muted" id="pmOut"></span>
+  </div>
+  <div id="pmPreview"></div>
 </section>
 </main>
 <div class="toast" id="toast" role="status"></div>
 <script src="common.js"></script>
+<script src="i18n.js"></script>
 <script>
+/* ---------- 영문 화면 (담당자 화면은 기본 한국어; 논문 그림·외국인 담당자용). 저장값·CSV 열 이름은 한국어 그대로 ---------- */
+Object.assign(EN, {
+  '말벌 신고 검수 (담당자)': 'Hornet report review (staff)', '말벌 신고 검수': 'Hornet report review', '전국 말벌 활동 지수': 'National hornet activity index',
+  '검수자': 'Reviewer', '이름': 'Name', '로그아웃': 'Log out', '① 검수 대기': '① Review queue', '② 활동 중인 둥지': '② Active nests', '③ 기록·내보내기': '③ Records & export',
+  '담당자 로그인': 'Staff login', '로그인': 'Log in', '최근 2일': 'Last 2 days', '최근 7일': 'Last 7 days', '최근 30일': 'Last 30 days', '접수 전체': 'All pending',
+  '검수용 CSV 내려받기': 'Download review CSV', '검수 결과 올리기': 'Upload decisions', '새로고침': 'Refresh',
+  '우선(사람·꿀벌 가까이)만': 'Priority only (near people/bees)', '둥지 목록 CSV 내려받기': 'Download nest CSV', '둥지 상태 올리기': 'Upload nest status',
+  'AI 학습용 목록 CSV': 'AI training list CSV', '전체 신고 CSV': 'All reports CSV', '쏘임 기록 CSV (통계용)': 'Sting records CSV', '원본 정리 실행': 'Run photo retention',
+  '시작': 'From', '끝': 'To', '시범 운영 지표 CSV': 'Pilot metrics CSV',
+  '검수 대기': 'Pending', '쏘임': 'Stings', '벌집': 'Nest', '말벌': 'Hornet', '우선': 'Priority', '우선(사람·꿀벌 가까이)': 'Priority (near people/bees)', '사진 없음': 'No photo',
+  '가장 오래 기다린 신고': 'Oldest waiting', '활동 중': 'Active', '그중 우선': 'of which priority', '제거됨': 'Removed', '사라짐': 'Gone',
+  '사진 불러오는 중': 'Loading photo', '사진을 열 수 없음': 'Photo unavailable', '카카오맵': 'Kakao Map', '해당하는 신고가 없습니다.': 'No reports.',
+  '기간을 확인하세요.': 'Check the period.', '계산 중…': 'Calculating…', '{n}줄 내려받음': '{n} rows downloaded', '만들지 못했습니다: ': 'Failed: ',
+  '건물 외부': 'Building exterior', '건물 속': 'Inside a wall / roof', '나무 가지': 'On a branch', '나무 구멍': 'Tree hollow', '모름': 'Unknown',
+  '국소': 'Local swelling', '전신': 'Whole-body symptoms', '병원치료': 'Hospital treatment', '이 기기(시연)': 'this device (demo)',
+  '{n}장': '{n} photos', '{n}명': '{n} people', '촬영 {t}': 'Taken {t}', '종: {s} · 확인 {d}': 'Species: {s} · confirmed {d}', '{n}일': '{n} d'
+});
+const HELP_EN = {
+  hQueue: `<b>Every two days</b><ol><li>Scan the photo cards. <b>Red borders</b> are first priority (stings; near people or bees).</li>
+    <li><b>Download review CSV</b> → fill only the right-hand columns in Excel (decision, reason, species, basis).</li>
+    <li><b>Upload decisions</b> with the same file → check the preview → apply. Approved reports appear on the public map at 1 km.</li></ol>`,
+  hNest: `<b>Confirmed nests still active</b><ol><li><b>Download nest CSV</b> — the same file goes to fire stations and local governments.</li>
+    <li>When a nest is gone, set its status to <b>Removed</b> or <b>Gone</b> with the date and who handled it, then <b>Upload nest status</b>.</li></ol>
+    <div style="margin-top:6px">The nest leaves the public map; the record stays.</div>`,
+  hExport: `<b>AI training list</b><ol><li>All reviewed photos with decisions; rejected bee/hoverfly photos are kept as "not a hornet".</li>
+    <li>Photo links open for 7 days; display copies (2,048 px) are kept.</li></ol>`,
+  hPilot: `<b>Pilot metrics (pilot_metrics.csv)</b><ol><li>Choose a period and download. <b>Aggregates only</b> — no report IDs, addresses, coordinates or contacts.</li>
+    <li>Reports by type, species and province; approval rate; rejection reasons; review time; nest closure rate, duration and handler; photo and English-screen share; daily index runs; running cost.</li></ol>`
+};
+
 /* ---------- 공통 ---------- */
 $('#reviewer').value = LS('reviewer') || '';
 $('#reviewer').onchange = () => LSset('reviewer', $('#reviewer').value.trim());
@@ -198,29 +244,29 @@ function sortQueue(a, b){
   return (b.track === '응급') - (a.track === '응급') || (b.priority === true) - (a.priority === true) || a.created_at.localeCompare(b.created_at);
 }
 function badges(r){
-  return (r.track === '응급' ? '<span class="badge b-sos">쏘임</span>' : r.report_type === '벌집' ? '<span class="badge b-nest">벌집</span>' : '<span class="badge b-wasp">말벌</span>')
-    + (r.priority && r.track !== '응급' ? '<span class="badge b-pri">우선</span>' : '');
+  return (r.track === '응급' ? `<span class="badge b-sos">${T('쏘임')}</span>` : r.report_type === '벌집' ? `<span class="badge b-nest">${T('벌집')}</span>` : `<span class="badge b-wasp">${T('말벌')}</span>`)
+    + (r.priority && r.track !== '응급' ? `<span class="badge b-pri">${T('우선')}</span>` : '');
 }
 async function cards(el, rows, extra){
-  if (!rows.length) { el.innerHTML = '<div class="empty">해당하는 신고가 없습니다.</div>'; return; }
+  if (!rows.length) { el.innerHTML = `<div class="empty">${T('해당하는 신고가 없습니다.')}</div>`; return; }
   el.innerHTML = rows.map(r => {
     const ms = mediaOf(r.report_id), m0 = ms[0];
     return `<div class="card ${r.priority ? 'pri' : ''}">
-      <div class="ph" data-path="${esc(m0 ? m0.display_path : '')}">${m0 ? '사진 불러오는 중' : '사진 없음'}${ms.length > 1 ? `<span class="n">${ms.length}장</span>` : ''}</div>
+      <div class="ph" data-path="${esc(m0 ? m0.display_path : '')}">${T(m0 ? '사진 불러오는 중' : '사진 없음')}${ms.length > 1 ? `<span class="n">${T('{n}장', { n: ms.length })}</span>` : ''}</div>
       <div class="body"><div>${badges(r)} <span class="id">${esc(r.report_id)}</span></div>
-        <div>${esc(r.place_type || r.activity || '')}${r.nest_site ? ' · ' + esc(r.nest_site) : ''}${r.sting_count ? ` · ${r.sting_count}명 ${esc(r.sting_severity || '')}` : ''}</div>
+        <div>${esc(TV(r.place_type || r.activity || ''))}${r.nest_site ? ' · ' + esc(TV(r.nest_site)) : ''}${r.sting_count ? ` · ${T('{n}명', { n: r.sting_count })} ${esc(TV(r.sting_severity || ''))}` : ''}</div>
         <div class="muted">${esc(r.seen_date)} · ${esc(r.address || fmtC(r.lat, r.lon))}</div>
         ${r.sigungu ? `<div class="muted">${esc([r.sido, r.sigungu, r.emd, r.ri].filter(Boolean).join(' '))}</div>` : ''}
-        ${m0 && m0.exif_taken_at ? `<div class="muted">촬영 ${esc(m0.exif_taken_at.slice(0, 16))}${m0.exif_device ? ' · ' + esc(m0.exif_device) : ''}</div>` : ''}
+        ${m0 && m0.exif_taken_at ? `<div class="muted">${esc(T('촬영 {t}', { t: m0.exif_taken_at.slice(0, 16) }))}${m0.exif_device ? ' · ' + esc(m0.exif_device) : ''}</div>` : ''}
         ${r.memo ? `<div>“${esc(r.memo)}”</div>` : ''}
         ${extra ? extra(r) : ''}
-        <div><a href="${kakao(r)}" target="_blank" rel="noopener">카카오맵</a></div></div></div>`;
+        <div><a href="${kakao(r)}" target="_blank" rel="noopener">${T('카카오맵')}</a></div></div></div>`;
   }).join('');
   for (const ph of el.querySelectorAll('.ph[data-path]')) {
     if (!ph.dataset.path) continue;
     const u = await STORE.blobURL(ph.dataset.path);
     if (u) { const n = ph.querySelector('.n'); ph.innerHTML = `<a href="${u}" target="_blank" rel="noopener"><img src="${u}" alt="" loading="lazy"></a>`; if (n) ph.appendChild(n); }
-    else ph.textContent = '사진을 열 수 없음';
+    else ph.textContent = T('사진을 열 수 없음');
   }
 }
 async function photoLinks(r){
@@ -245,8 +291,8 @@ async function renderQueue(){
   $('#qStats').innerHTML = [
     ['검수 대기', pend.length], ['쏘임', pend.filter(r => r.track === '응급').length],
     ['우선(사람·꿀벌 가까이)', pend.filter(r => r.priority && r.track !== '응급').length],
-    ['사진 없음', pend.filter(r => !r.n_photos).length], ['가장 오래 기다린 신고', oldest + '일']
-  ].map(([a, b]) => `<div class="stat"><b>${b}</b><span>${a}</span></div>`).join('');
+    ['사진 없음', pend.filter(r => !r.n_photos).length], ['가장 오래 기다린 신고', T('{n}일', { n: oldest })]
+  ].map(([a, b]) => `<div class="stat"><b>${b}</b><span>${esc(T(a))}</span></div>`).join('');
   await cards($('#qGrid'), q);
 }
 $('#qRange').onchange = renderQueue;
@@ -335,8 +381,8 @@ async function loadNests(){
   const act = all.filter(r => (r.nest_status || '활동중') === '활동중');
   $('#nStats').innerHTML = [['활동 중', act.length], ['그중 우선', act.filter(r => r.priority).length],
     ['제거됨', all.filter(r => r.nest_status === '제거됨').length], ['사라짐', all.filter(r => r.nest_status === '사라짐').length]]
-    .map(([a, b]) => `<div class="stat"><b>${b}</b><span>${a}</span></div>`).join('');
-  await cards($('#nGrid'), nestRows(), r => `<div>종: ${esc(r.species || '판별불가')} · 확인 ${esc((r.reviewed_at || '').slice(0, 10))}</div>`);
+    .map(([a, b]) => `<div class="stat"><b>${b}</b><span>${esc(T(a))}</span></div>`).join('');
+  await cards($('#nGrid'), nestRows(), r => `<div>${esc(T('종: {s} · 확인 {d}', { s: TS(r.species || '판별불가'), d: (r.reviewed_at || '').slice(0, 10) }))}</div>`);
 }
 $('#nPriOnly').onchange = loadNests;
 const N_COLS = ['신고번호','우선','장소','벌집위치','시도','시군구','읍면동','리','주소','위도','경도','발견일','종','사진1','카카오맵','둥지상태','처리일','처리주체','처리메모'];
@@ -398,6 +444,102 @@ $('#xRet').onclick = async () => {
   try { const x = await STORE.runRetention(); $('#xRetOut').textContent = `휴지통으로 ${x.trashed}장, 삭제 ${x.deleted}장`; }
   catch (err) { $('#xRetOut').textContent = '실행하지 못했습니다: ' + err.message; }
 };
+/* =====================================================================
+   시범 운영 지표 (pilot_metrics.csv) — 집계만, 개인정보 없음
+   ===================================================================== */
+const RUNLOG_URL = 'https://raw.githubusercontent.com/Karl7208/hornet-index/main/data/archive/runlog.csv';
+const SERVICES = 'GitHub Pages; GitHub Actions; Supabase Free (PostgreSQL·Auth·Storage); KMA API Hub (기상청 API허브); Kakao Maps JavaScript SDK; VWorld WMTS; OpenStreetMap tiles; Leaflet';
+const PM_COLS = ['section', 'metric', 'group', 'value', 'unit', 'n', 'note'];
+const qtl = (a, p) => { if (!a.length) return ''; const s = [...a].sort((x, y) => x - y), i = (s.length - 1) * p, lo = Math.floor(i), hi = Math.ceil(i); return +(s[lo] + (s[hi] - s[lo]) * (i - lo)).toFixed(2); };
+const pct = (a, b) => b ? +(100 * a / b).toFixed(1) : '';
+async function reportsInPeriod(from, to){
+  const t1 = new Date(from + 'T00:00:00+09:00').toISOString(), t2 = new Date(new Date(to + 'T00:00:00+09:00').getTime() + 864e5).toISOString();
+  if (STORE === SupaStore) {                 // 1,000건 넘어도 모두 셈 (화면 목록은 최근 1,000건)
+    const out = [];
+    for (let i = 0; ; i += 1000) {
+      const r = await STORE.c.from('reports').select('*').gte('created_at', t1).lt('created_at', t2).order('created_at').range(i, i + 999);
+      if (r.error) throw new Error(r.error.message);
+      out.push(...r.data); if (r.data.length < 1000) break;
+    }
+    return out;
+  }
+  return ALL.filter(r => r.created_at >= t1 && r.created_at < t2);
+}
+function parseRunlog(txt){
+  const rows = parseCSV(txt); return rows.filter(r => r.date);
+}
+async function pilotMetrics(from, to){
+  const R = await reportsInPeriod(from, to), out = [];
+  const add = (section, metric, group, value, unit = '', n = '', note = '') => out.push({ section, metric, group, value, unit, n, note });
+  add('meta', 'period', '', `${from}~${to}`, 'KST, 신고 접수일 기준'); add('meta', 'generated_at', '', localStamp(new Date()));
+  add('meta', 'app_version', '', CFG.appVersion);
+  // 신고 수
+  add('reports', 'total', '', R.length, 'reports');
+  const cnt = (arr, f) => arr.reduce((m, r) => { const k = f(r) || '(빈칸)'; m[k] = (m[k] || 0) + 1; return m; }, {});
+  Object.entries(cnt(R, r => r.report_type)).forEach(([k, v]) => add('reports', 'by_type', k, v, 'reports'));
+  Object.entries(cnt(R, r => r.status)).forEach(([k, v]) => add('reports', 'by_status', k, v, 'reports'));
+  Object.entries(cnt(R, r => r.sido)).sort((a, b) => b[1] - a[1]).forEach(([k, v]) => add('reports', 'by_sido', k, v, 'reports'));
+  const appr = R.filter(r => r.status === '승인'), rej = R.filter(r => r.status === '반려');
+  Object.entries(cnt(appr, r => r.species)).sort((a, b) => b[1] - a[1])
+    .forEach(([k, v]) => add('reports', 'approved_by_species', k + (SPECIES_SCI[k] ? ` (${SPECIES_SCI[k]})` : ''), v, 'reports'));
+  // 검수
+  add('review', 'approval_rate', '', pct(appr.length, appr.length + rej.length), '%', appr.length + rej.length, '승인 / (승인+반려)');
+  Object.entries(cnt(rej, r => r.reject_reason)).sort((a, b) => b[1] - a[1]).forEach(([k, v]) => add('review', 'reject_reason', k, v, 'reports'));
+  const lat = R.filter(r => r.reviewed_at && r.created_at).map(r => (new Date(r.reviewed_at) - new Date(r.created_at)) / 36e5).filter(h => h >= 0);
+  add('review', 'latency_median', '', qtl(lat, .5), 'hours', lat.length, '접수 → 판정 (첫 판정이 바뀐 경우 마지막 판정 시각)');
+  add('review', 'latency_q1', '', qtl(lat, .25), 'hours', lat.length); add('review', 'latency_q3', '', qtl(lat, .75), 'hours', lat.length);
+  add('review', 'within_2_days', '', pct(lat.filter(h => h <= 48).length, lat.length), '%', lat.length);
+  add('review', 'pending_now', '', R.filter(r => r.status === '접수').length, 'reports');
+  // 둥지
+  const nests = appr.filter(r => r.report_type === '벌집'), closed = nests.filter(r => ['제거됨', '사라짐'].includes(r.nest_status));
+  add('nests', 'approved_nests', '', nests.length, 'nests');
+  add('nests', 'closure_rate', '', pct(closed.length, nests.length), '%', nests.length, '제거됨+사라짐 / 승인된 벌집');
+  Object.entries(cnt(closed, r => r.nest_status)).forEach(([k, v]) => add('nests', 'closed_by_status', k, v, 'nests'));
+  const dur = closed.filter(r => r.nest_status_at && r.seen_date).map(r => (new Date(r.nest_status_at) - new Date(r.seen_date)) / 864e5).filter(d => d >= 0);
+  add('nests', 'closure_days_median', '', qtl(dur, .5), 'days', dur.length, '발견일 → 처리일');
+  add('nests', 'closure_days_q1', '', qtl(dur, .25), 'days', dur.length); add('nests', 'closure_days_q3', '', qtl(dur, .75), 'days', dur.length);
+  Object.entries(cnt(closed, r => r.nest_handler)).sort((a, b) => b[1] - a[1]).forEach(([k, v]) => add('nests', 'closed_by_handler', k, v, 'nests'));
+  // 사진·언어
+  add('usage', 'photo_share', '', pct(R.filter(r => r.n_photos > 0).length, R.length), '%', R.length, '사진 1장 이상');
+  const withLang = R.filter(r => r.ui_lang);
+  add('usage', 'english_screen_share', '', pct(withLang.filter(r => r.ui_lang === 'en').length, withLang.length), '%', withLang.length,
+      withLang.length < R.length ? `언어 기록 전 신고 ${R.length - withLang.length}건 제외 (v7 SQL 이후 기록)` : '');
+  add('usage', 'sting_reports_people', '', R.filter(r => r.track === '응급').reduce((s, r) => s + (+r.sting_count || 0), 0), 'people');
+  // 지수 매일 실행
+  let runs = [];
+  try { const t = await fetch(RUNLOG_URL + '?v=' + Date.now()).then(r => r.ok ? r.text() : ''); runs = t ? parseRunlog(t).filter(r => r.date >= from && r.date <= to) : []; }
+  catch { runs = []; }
+  const days = Math.round((new Date(to) - new Date(from)) / 864e5) + 1;
+  const ok = runs.filter(r => r.status === 'ok'), num = k => ok.map(r => +r[k]).filter(v => Number.isFinite(v));
+  add('index_runs', 'days_in_period', '', days, 'days');
+  add('index_runs', 'success_rate', '', runs.length ? pct(ok.length, days) : '', '%', ok.length, runs.length ? '성공한 날 / 기간 일수 (runlog.csv)' : 'runlog.csv 없음 또는 기간 밖');
+  add('index_runs', 'elapsed_median', '', qtl(num('elapsed_s'), .5), 'seconds', ok.length, 'GitHub Actions 계산 단계 (설치·배포 제외)');
+  add('index_runs', 'stations_median', '', qtl(num('n_stations'), .5), 'stations', ok.length, 'ASOS+AWS (산악기상 제외)');
+  add('index_runs', 'stations_min', '', num('n_stations').length ? Math.min(...num('n_stations')) : '', 'stations', ok.length);
+  ['tavg', 'tmax', 'tmin', 'rh', 'ws', 'rain'].forEach(v => {
+    const a = num('missing_' + v); add('index_runs', 'missing_rate_mean', v, a.length ? +(a.reduce((s, x) => s + x, 0) / a.length).toFixed(2) : '', '%', a.length, '그날 관측소 중 결측 비율');
+  });
+  // 비용
+  add('cost', 'running_cost', '', 0, 'KRW', '', '무료 요금제만 사용');
+  add('cost', 'services', '', SERVICES);
+  return out;
+}
+const todayKST = () => localDate(new Date());
+$('#pmTo').value = todayKST(); $('#pmFrom').value = todayKST().slice(0, 8) + '01';
+$('#xPilot').onclick = async () => {
+  const from = $('#pmFrom').value, to = $('#pmTo').value;
+  if (!from || !to || from > to) return toast(T('기간을 확인하세요.'));
+  $('#pmOut').textContent = T('계산 중…');
+  try {
+    const rows = await pilotMetrics(from, to);
+    download(`pilot_metrics_${from.replace(/-/g, '')}_${to.replace(/-/g, '')}.csv`, toCSV(rows, PM_COLS), 'text/csv');
+    $('#pmOut').textContent = T('{n}줄 내려받음', { n: rows.length });
+    const key = ['total', 'approval_rate', 'latency_median', 'closure_rate', 'photo_share', 'english_screen_share', 'success_rate', 'stations_median'];
+    $('#pmPreview').innerHTML = `<div class="preview"><table><tr><th>metric</th><th>value</th><th>unit</th><th>n</th></tr>` +
+      rows.filter(r => key.includes(r.metric)).map(r => `<tr><td>${esc(r.metric)}</td><td>${esc(r.value)}</td><td>${esc(r.unit)}</td><td>${esc(r.n)}</td></tr>`).join('') + '</table></div>';
+  } catch (err) { $('#pmOut').textContent = T('만들지 못했습니다: ') + err.message; }
+};
+
 /* 시작 */
 function showApp(on){
   $('#login').style.display = on ? 'none' : 'block';
@@ -407,7 +549,7 @@ function showApp(on){
 async function startApp(){
   const s = await STORE.session();
   if (!s) { showApp(false); return; }
-  $('#acct').textContent = s.user?.email || ''; $('#logout').style.display = STORE === SupaStore ? '' : 'none';
+  $('#acct').textContent = TV(s.user?.email || ''); $('#logout').style.display = STORE === SupaStore ? '' : 'none';
   if (!$('#reviewer').value && s.user?.email) $('#reviewer').value = s.user.email.split('@')[0];
   showApp(true);
   try { await loadAll(); } catch (err) { toast('불러오지 못했습니다: ' + err.message); }
@@ -420,6 +562,11 @@ $('#lgGo').onclick = async () => {
 };
 $('#lgPw').onkeydown = e => { if (e.key === 'Enter') $('#lgGo').click(); };
 $('#logout').onclick = async () => { await STORE.signOut(); location.reload(); };
+/* 언어 */
+$('#langSlot').appendChild(langButton());
+$('#lnIndex').href += '?lang=' + LANG; $('#lnMap').href += '?lang=' + LANG;
+if (LANG === 'en') Object.entries(HELP_EN).forEach(([id, h]) => { const e = document.getElementById(id); if (e) e.innerHTML = h; });
+translateDom();
 (async () => { await initStore($('#modeLine')); startApp(); })();
 </script>
 </body>
