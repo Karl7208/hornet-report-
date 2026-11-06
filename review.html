@@ -510,9 +510,18 @@ async function pilotMetrics(from, to){
   try { const t = await fetch(RUNLOG_URL + '?v=' + Date.now()).then(r => r.ok ? r.text() : ''); runs = t ? parseRunlog(t).filter(r => r.date >= from && r.date <= to) : []; }
   catch { runs = []; }
   const days = Math.round((new Date(to) - new Date(from)) / 864e5) + 1;
-  const ok = runs.filter(r => r.status === 'ok'), num = k => ok.map(r => +r[k]).filter(v => Number.isFinite(v));
+  // runlog는 시도마다 한 줄(성공·실패·덜 됨). 날짜마다 첫 성공만 셈
+  const firstOk = {}; runs.filter(r => r.status === 'ok').forEach(r => { if (!firstOk[r.date]) firstOk[r.date] = r; });
+  const ok = Object.values(firstOk), num = k => ok.map(r => +r[k]).filter(v => Number.isFinite(v));
   add('index_runs', 'days_in_period', '', days, 'days');
   add('index_runs', 'success_rate', '', runs.length ? pct(ok.length, days) : '', '%', ok.length, runs.length ? '성공한 날 / 기간 일수 (runlog.csv)' : 'runlog.csv 없음 또는 기간 밖');
+  add('index_runs', 'attempts_failed', '', runs.filter(r => r.status === 'fail').length, 'runs', runs.length, '실패한 시도 (같은 날 뒤 예약 실행에서 성공했을 수 있음)');
+  add('index_runs', 'attempts_not_ready', '', runs.filter(r => r.status === 'not_ready').length, 'runs', runs.length, '기준일 관측이 덜 올라와 다음 예약으로 넘긴 시도');
+  const kstMin = t => { const d = new Date(t); if (isNaN(d)) return NaN; const k = new Date(d.getTime() + 9 * 36e5); return k.getUTCHours() * 60 + k.getUTCMinutes(); };
+  const done = ok.map(r => kstMin(r.run_utc)).filter(Number.isFinite), hm = m => m === '' ? '' : `${String(Math.floor(m / 60)).padStart(2, '0')}:${String(Math.round(m % 60)).padStart(2, '0')}`;
+  add('index_runs', 'update_time_median_kst', '', hm(qtl(done, .5)), 'HH:MM', done.length, '지도가 갱신된 시각 (성공한 첫 실행의 끝난 시각)');
+  add('index_runs', 'update_time_q3_kst', '', hm(qtl(done, .75)), 'HH:MM', done.length);
+  add('index_runs', 'updated_before_0700', '', pct(done.filter(m => m < 420).length, done.length), '%', done.length);
   add('index_runs', 'elapsed_median', '', qtl(num('elapsed_s'), .5), 'seconds', ok.length, 'GitHub Actions 계산 단계 (설치·배포 제외)');
   add('index_runs', 'stations_median', '', qtl(num('n_stations'), .5), 'stations', ok.length, 'ASOS+AWS (산악기상 제외)');
   add('index_runs', 'stations_min', '', num('n_stations').length ? Math.min(...num('n_stations')) : '', 'stations', ok.length);
