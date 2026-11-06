@@ -1,0 +1,21 @@
+cff-version: 1.2.0
+message: "If you use this software, please cite it and the accompanying paper."
+title: "hornet-report: citizen hornet sting, nest and sighting reporting with staff review and a public 1-km map"
+type: software
+authors:
+  - family-names: Min
+    given-names: Sung-Hyun
+    affiliation: "Apiculture Division, National Institute of Agricultural Sciences, Rural Development Administration, Republic of Korea"
+repository-code: "https://github.com/Karl7208/hornet-report-"
+url: "https://karl7208.github.io/hornet-report-/"
+keywords:
+  - Vespa velutina
+  - citizen science
+  - hornet
+  - honeybee
+  - Supabase
+abstract: >-
+  Static web application (Korean/English) for reporting hornet stings, nests and sightings with
+  photographs and location, a staff review workflow (approve/reject, species, nest removal records),
+  a public map aggregated to about 1 km, aggregated fire-service nest-removal history, and an export
+  of pilot-operation metrics. Back end: Supabase (PostgreSQL, Auth, Storage).
