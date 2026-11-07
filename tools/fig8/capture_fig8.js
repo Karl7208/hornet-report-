@@ -20,6 +20,7 @@ const REPORT = path.resolve(arg('--report') || '../..');
 const INDEX = path.resolve(arg('--index') || '../../../hornet-index');
 const OUT = path.resolve(arg('--out') || 'fig8');
 const OFFLINE = process.argv.includes('--offline');
+const CAPTURE_NOW = arg('--now') || '2026-08-21T03:00:00Z';   // 지수 화면(d·e)의 '지금' = 예시 날짜(2026-08-20) 다음 날 12시 KST
 const NM = path.resolve(arg('--node-modules') || path.join(__dirname, 'node_modules'));
 const DEMO_DIR = __dirname;
 fs.mkdirSync(OUT, { recursive: true });
@@ -170,6 +171,7 @@ async function seed(page){
   // d 우리 지역 (휴대폰)
   { const ctx = await browser.newContext(phone); await ctx.addInitScript(init); await routes(ctx);
     const p = await ctx.newPage();
+    if (p.clock) await p.clock.setFixedTime(new Date(CAPTURE_NOW));          // 예시 날짜 다음 날 낮으로 (갱신 지연 표시 안 나오게)
     await p.goto('http://127.0.0.1:8002/local.html?lang=en&r=' + encodeURIComponent('전북 전주시 덕진구')); await p.waitForTimeout(2500);
     await backdrop(p, 'map'); await shot(p, 'fig8d_local_view.png');
     await p.evaluate(() => window.scrollBy(0, 760)); await shot(p, 'fig8d_local_view_2.png'); await ctx.close(); }
@@ -177,6 +179,7 @@ async function seed(page){
   // e 전국 1 km 지수 (PC)
   { const ctx = await browser.newContext(pc); await ctx.addInitScript(init); await routes(ctx);
     const p = await ctx.newPage();
+    if (p.clock) await p.clock.setFixedTime(new Date(CAPTURE_NOW));
     await p.goto('http://127.0.0.1:8002/index.html?lang=en'); await p.waitForTimeout(1500);
     if (OFFLINE) await p.check('input[name=bg][value=white]');
     await p.waitForTimeout(1200); await shot(p, 'fig8e_national_index.png'); await ctx.close(); }
