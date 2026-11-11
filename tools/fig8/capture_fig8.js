@@ -146,7 +146,7 @@ async function seed(page){
   const phone = { viewport: { width: 390, height: 844 }, deviceScaleFactor: 2, isMobile: true, hasTouch: true, locale: 'en-GB',
     geolocation: { latitude: 35.8467, longitude: 127.1290 }, permissions: ['geolocation'] };
   const pc = { viewport: { width: 1440, height: 900 }, deviceScaleFactor: 2, locale: 'en-GB' };
-  const init = `try { localStorage.setItem('hr.cfg', JSON.stringify({ mode: 'local' })); localStorage.setItem('hr.lang', 'en'); } catch {}`;
+  const init = `try { localStorage.setItem('hr.cfg', JSON.stringify({ mode: 'local' })); localStorage.setItem('hr.lang', 'en'); } catch {} window.HR_GATE_OFF = true;`;   // 전국 지도 담당자 잠금은 캡처에서 끔
   const shot = async (page, name, opt = {}) => { await page.waitForTimeout(900); await page.screenshot({ path: path.join(OUT, name), ...opt }); console.log('  ', name); };
 
   // 브라우저 창(context)마다 저장소가 따로라서, 신고 앱을 쓰는 창마다 시연 자료를 먼저 넣음

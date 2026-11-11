@@ -369,9 +369,14 @@ SupaStore.myReports = async function(uid){
 };
 LocalStore.myReports = async function(uid){ return (await this.listReports()).filter(x => x.reporter_id === uid); };
 
-/* 담당자 로그인 (Supabase Auth, 이메일·비밀번호) */
+/* 담당자 로그인 (Supabase Auth). 아이디만 넣으면 아이디@STAFF_DOMAIN 계정으로 로그인
+   (예: admin → admin@hornet.local). '@'가 있으면 그대로 이메일로 씀.
+   STAFF_DOMAIN은 메일이 가지 않는 주소 → 비밀번호 재설정 메일이 남에게 갈 일이 없음 */
+const STAFF_DOMAIN = 'hornet.local';
+const staffEmail = id => { id = String(id || '').trim(); return id.includes('@') ? id : id.toLowerCase() + '@' + STAFF_DOMAIN; };
+const staffId = email => String(email || '').endsWith('@' + STAFF_DOMAIN) ? email.slice(0, -STAFF_DOMAIN.length - 1) : (email || '');
 SupaStore.session = async function(){ const r = await this.c.auth.getSession(); return r.data.session; };
-SupaStore.signIn = async function(email, password){ const r = await this.c.auth.signInWithPassword({ email, password }); if (r.error) throw new Error(r.error.message); return r.data.session; };
+SupaStore.signIn = async function(id, password){ const r = await this.c.auth.signInWithPassword({ email: staffEmail(id), password }); if (r.error) throw new Error(r.error.message === 'Invalid login credentials' ? (typeof T === 'function' ? T('아이디 또는 비밀번호가 맞지 않습니다') : '아이디 또는 비밀번호가 맞지 않습니다') : r.error.message); return r.data.session; };
 SupaStore.signOut = async function(){ await this.c.auth.signOut(); };
 LocalStore.session = async function(){ return { user: { email: '이 기기(시연)' } }; };
 
